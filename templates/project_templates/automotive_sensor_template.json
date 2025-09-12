@@ -1,0 +1,32 @@
+{
+  "name": "Bosch Automotive Sensor Platform",
+  "type": "Hardware Development",
+  "description": "Next-generation sensor platform for autonomous vehicle applications with AI-powered analytics and real-time processing capabilities.",
+  "functional_reqs": [
+    "System shall process sensor data in real-time with latency < 10ms",
+    "Platform shall support multiple sensor types (LiDAR, camera, radar)",
+    "AI inference engine shall provide 99.5% accuracy for object detection",
+    "System shall operate in temperature range -40°C to +85°C",
+    "Platform shall support OTA updates for AI models"
+  ],
+  "non_functional_reqs": [
+    "System availability shall be 99.9% during operation",
+    "Power consumption shall not exceed 50W under full load",
+    "Platform shall be ASIL-D compliant for safety-critical functions",
+    "Data encryption shall meet automotive cybersecurity standards",
+    "MTBF shall be minimum 100,000 hours"
+  ],
+  "conditions": [
+    "Development must comply with ISO 26262 functional safety standard",
+    "All components must be automotive-grade qualified",
+    "Budget constraint of €2.5M for development phase",
+    "Project timeline not to exceed 24 months",
+    "Must integrate with existing Bosch ECU architecture"
+  ],
+  "recommended_docs": [
+    "Project Management Plan (PMP)",
+    "Technical Concept Document (TCD)",
+    "Risk Management Plan",
+    "Quality Plan"
+  ]
+}

@@ -1,21 +1,21 @@
 [server]
 address = "127.0.0.1"
-port = 8501
-headless = true
-runOnSave = false
-allowRunOnSave = false
+port = 8503
+headless = false
+runOnSave = true
+allowRunOnSave = true
 
 [browser]
 gatherUsageStats = false
 serverAddress = "127.0.0.1"
-serverPort = 8501
+serverPort = 8503
 
 [theme]
 base = "light"
-primaryColor = "#00629B"
+primaryColor = "#DC2626"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#262730"
+secondaryBackgroundColor = "#F3F4F6"
+textColor = "#374151"
 
 [logger]
 level = "error"

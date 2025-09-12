@@ -1,0 +1,32 @@
+{
+  "name": "Bosch IoT Smart Factory Solution",
+  "type": "Software Development",
+  "description": "Comprehensive IoT platform for smart manufacturing with predictive maintenance, energy optimization, and production analytics.",
+  "functional_reqs": [
+    "Platform shall connect and manage 10,000+ IoT devices",
+    "Real-time dashboard shall display production KPIs",
+    "Predictive maintenance algorithms shall forecast equipment failures",
+    "System shall support multi-tenant architecture",
+    "API gateway shall handle 100,000 requests per minute"
+  ],
+  "non_functional_reqs": [
+    "System uptime shall be 99.95%",
+    "Response time for critical alerts shall be < 100ms",
+    "Platform shall scale horizontally to handle peak loads",
+    "Data retention shall be 7 years for compliance",
+    "System shall support disaster recovery with RPO < 1 hour"
+  ],
+  "conditions": [
+    "Must comply with GDPR and industrial data protection regulations",
+    "Integration with existing SAP systems required",
+    "Cloud deployment on Bosch IoT Cloud platform",
+    "Development team distributed across 3 geographic locations",
+    "Go-live date fixed for Q4 2025"
+  ],
+  "recommended_docs": [
+    "Technical Concept Document (TCD)",
+    "Configuration Management Plan",
+    "Communication Management Plan",
+    "Architecture Document"
+  ]
+}
