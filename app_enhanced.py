@@ -20,6 +20,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
 from config.auth_config import VALID_PASSWORDS, HINT_MESSAGE, MAX_LOGIN_ATTEMPTS
 from config.database import DatabaseManager
 from services.llm_service import llm_service
+from services.rag_service import RAGService
 
 # Configure Streamlit page with Bosch branding
 st.set_page_config(
@@ -272,63 +273,452 @@ def authenticate_user():
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.login_attempts = 0
+        st.session_state.user_role = 'PM'  # Default role
     
     if not st.session_state.authenticated:
+        # Add Bosch logo and app name
+        logo_col1, logo_col2, logo_col3 = st.columns([1, 2, 1])
+        with logo_col2:
+            try:
+                st.image("data/images/Bosch-Logo.png", width=200)
+            except:
+                st.write("🔧 **Bosch**")
+        
+        st.markdown("""
+        <div style="text-align: center; margin: 2rem 0;">
+            <h1 style="color: #00629B; font-size: 3rem; margin-bottom: 0.5rem;">IntelliFusion</h1>
+            <p style="color: #6B7280; font-size: 1.2rem;">AI Document Assistant</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
         st.markdown("""
         <div class="login-container">
-            <h2 class="login-title">🔧 Bosch Employee Verification</h2>
-            <p style="text-align: center; color: #6B7280; margin-bottom: 2rem;">
-                Prove that you are a Bosch employee.<br>
-                Enter any Bosch Hashtags to login.
-            </p>
+            <h2 class="login-title">🔧 User Login</h2>
         </div>
         """, unsafe_allow_html=True)
         
         with st.form("login_form"):
-            password = st.text_input("Enter Bosch Hashtag:", type="password", placeholder="#BeLikeBosch")
+            # Role selection
+            user_role = st.selectbox(
+                "Select your role:",
+                options=["PM", "Project team"],
+                index=0,  # PM is default
+                help="PM: Full access to all features | Project team: Limited access"
+            )
+            
+            password = st.text_input("Password:", type="password", placeholder="Enter your password")
             login_button = st.form_submit_button("🚀 Login", use_container_width=True)
             
             if login_button:
-                if password.lower() in [p.lower() for p in VALID_PASSWORDS]:
+                # Role-based password validation
+                valid_password = False
+                if user_role == "PM" and password == "admin":
+                    valid_password = True
+                elif user_role == "Project team" and password == "user":
+                    valid_password = True
+                
+                if valid_password:
                     st.session_state.authenticated = True
+                    st.session_state.user_role = user_role
                     st.session_state.login_attempts = 0
+                    st.success(f"✅ Welcome! Logged in as: {user_role}")
                     st.rerun()
                 else:
                     st.session_state.login_attempts += 1
                     
                     if st.session_state.login_attempts >= MAX_LOGIN_ATTEMPTS:
-                        st.error(f"❌ Invalid hashtag! {HINT_MESSAGE}")
+                        st.error(f"❌ Invalid password! Hint: PM password is 'admin', Project team password is 'user'")
                     else:
                         remaining = MAX_LOGIN_ATTEMPTS - st.session_state.login_attempts
-                        st.error(f"❌ Invalid hashtag! {remaining} attempts remaining.")
-        
-        st.markdown("---")
-        st.markdown("""
-        <div style="text-align: center; color: #6B7280; font-size: 0.9rem;">
-            <p><strong>Valid Hashtags Include:</strong></p>
-            <p>#BeLikeBosch | #BoschLife | #InventedForLife | #BoschInnovation | #BoschTech</p>
-        </div>
-        """, unsafe_allow_html=True)
+                        st.error(f"❌ Invalid password! {remaining} attempts remaining.")
         
         return False
     
     return True
 
+def check_access(required_role_or_permissions):
+    """Check if current user has access to specific functionality
+    
+    Args:
+        required_role_or_permissions: Can be 'PM', 'Project team', or list of specific permissions
+    
+    Returns:
+        bool: True if user has access, False otherwise
+    """
+    if not st.session_state.get('authenticated', False):
+        return False
+    
+    user_role = st.session_state.get('user_role', 'Project team')
+    
+    # PM has access to everything
+    if user_role == 'PM':
+        return True
+    
+    # Project team permissions
+    if user_role == 'Project team':
+        if isinstance(required_role_or_permissions, str):
+            if required_role_or_permissions == 'Project team':
+                return True
+            elif required_role_or_permissions == 'PM':
+                return False
+        elif isinstance(required_role_or_permissions, list):
+            # Check specific permissions
+            project_team_permissions = [
+                'generate_document', 
+                'view_workflow', 
+                'ai_assistant', 
+                'dashboard',
+                'project_overview'
+            ]
+            return all(perm in project_team_permissions for perm in required_role_or_permissions)
+    
+    return False
+
+def show_access_denied(feature_name="this feature"):
+    """Show access denied message"""
+    st.error(f"🔒 Access Denied: Only PM users can access {feature_name}.")
+    st.info("💡 Contact your Project Manager for access or login with a PM role.")
+
 def initialize_app():
     """Initialize the application"""
-    if 'db' not in st.session_state:
-        st.session_state.db = DatabaseManager()
+    try:
+        if 'db' not in st.session_state:
+            st.session_state.db = DatabaseManager()
+        
+        if 'rag_service' not in st.session_state:
+            st.session_state.rag_service = RAGService(st.session_state.db)
+        
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+        
+        if 'llm_settings' not in st.session_state:
+            st.session_state.llm_settings = {
+                'temperature': 0.7,
+                'max_tokens': 2000,
+                'model': 'gpt-4o-mini',
+                'use_project_context': True
+            }
+            
+    except Exception as e:
+        st.error(f"Initialization Error: {str(e)}")
+        st.exception(e)
+
+def create_project_template_folder(project_name: str) -> str:
+    """Create and return the template folder path for a project"""
+    # Sanitize project name for folder creation
+    safe_project_name = "".join(c for c in project_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    safe_project_name = safe_project_name.replace(' ', '_')
     
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+    templates_base = os.path.join(os.getcwd(), 'templates')
+    project_template_folder = os.path.join(templates_base, safe_project_name, 'template')
     
-    if 'llm_settings' not in st.session_state:
-        st.session_state.llm_settings = {
-            'temperature': 0.7,
-            'max_tokens': 2000,
-            'model': 'gpt-4o-mini',
-            'use_project_context': True
+    # Create folder structure if it doesn't exist
+    os.makedirs(project_template_folder, exist_ok=True)
+    
+    return project_template_folder
+
+def generate_ai_template(doc_type: str, project_context: Dict) -> str:
+    """Generate AI template for a specific document type"""
+    templates_map = {
+        "Project Management Plan (PMP)": {
+            "title": "Project Management Plan",
+            "sections": [
+                "1. PROJECT OVERVIEW",
+                "1.1 Project Purpose and Justification",
+                "1.2 Project Description",
+                "1.3 Project Objectives", 
+                "1.4 Success Criteria",
+                "2. PROJECT SCOPE",
+                "2.1 In Scope",
+                "2.2 Out of Scope",
+                "2.3 Deliverables",
+                "3. PROJECT ORGANIZATION",
+                "3.1 Project Team Structure",
+                "3.2 Roles and Responsibilities",
+                "3.3 Communication Plan",
+                "4. PROJECT SCHEDULE",
+                "4.1 Major Milestones",
+                "4.2 Work Breakdown Structure",
+                "4.3 Critical Path Analysis",
+                "5. RISK MANAGEMENT",
+                "5.1 Risk Assessment",
+                "5.2 Risk Mitigation Strategies",
+                "5.3 Contingency Planning",
+                "6. QUALITY MANAGEMENT",
+                "6.1 Quality Standards",
+                "6.2 Quality Assurance Process",
+                "6.3 Quality Control Measures"
+            ]
+        },
+        "Technical Concept Document (TCD)": {
+            "title": "Technical Concept Document", 
+            "sections": [
+                "1. EXECUTIVE SUMMARY",
+                "2. TECHNICAL REQUIREMENTS",
+                "2.1 Functional Requirements",
+                "2.2 Non-Functional Requirements",
+                "2.3 Interface Requirements",
+                "3. SYSTEM ARCHITECTURE",
+                "3.1 High-Level Architecture",
+                "3.2 Component Design",
+                "3.3 Data Flow Diagrams",
+                "4. TECHNOLOGY STACK",
+                "4.1 Hardware Requirements",
+                "4.2 Software Components",
+                "4.3 Third-Party Dependencies",
+                "5. IMPLEMENTATION APPROACH",
+                "5.1 Development Methodology",
+                "5.2 Integration Strategy",
+                "5.3 Testing Strategy",
+                "6. SECURITY CONSIDERATIONS",
+                "7. PERFORMANCE ANALYSIS",
+                "8. MAINTENANCE AND SUPPORT"
+            ]
+        },
+        "Configuration Management Plan": {
+            "title": "Configuration Management Plan",
+            "sections": [
+                "1. INTRODUCTION",
+                "2. CONFIGURATION MANAGEMENT OBJECTIVES",
+                "3. CONFIGURATION IDENTIFICATION",
+                "3.1 Configuration Items",
+                "3.2 Naming Conventions",
+                "3.3 Versioning Strategy",
+                "4. CONFIGURATION CONTROL",
+                "4.1 Change Control Process",
+                "4.2 Change Control Board",
+                "4.3 Configuration Baselines",
+                "5. CONFIGURATION STATUS ACCOUNTING",
+                "6. CONFIGURATION AUDITS",
+                "7. TOOLS AND INFRASTRUCTURE",
+                "8. ROLES AND RESPONSIBILITIES"
+            ]
+        },
+        "Communication Management Plan": {
+            "title": "Communication Management Plan",
+            "sections": [
+                "1. COMMUNICATION OBJECTIVES",
+                "2. STAKEHOLDER ANALYSIS",
+                "3. COMMUNICATION REQUIREMENTS",
+                "4. COMMUNICATION METHODS AND CHANNELS",
+                "5. COMMUNICATION MATRIX",
+                "6. MEETING MANAGEMENT",
+                "7. REPORTING STRUCTURE",
+                "8. INFORMATION DISTRIBUTION",
+                "9. COMMUNICATION ESCALATION",
+                "10. COMMUNICATION MONITORING AND CONTROL"
+            ]
+        },
+        "Risk Management Plan": {
+            "title": "Risk Management Plan",
+            "sections": [
+                "1. RISK MANAGEMENT APPROACH",
+                "2. RISK CATEGORIES",
+                "3. RISK IDENTIFICATION",
+                "4. QUALITATIVE RISK ANALYSIS",
+                "5. QUANTITATIVE RISK ANALYSIS",
+                "6. RISK RESPONSE PLANNING",
+                "7. RISK MONITORING AND CONTROL",
+                "8. RISK REGISTER",
+                "9. RISK REPORTING",
+                "10. ROLES AND RESPONSIBILITIES"
+            ]
+        },
+        "Quality Plan": {
+            "title": "Quality Management Plan",
+            "sections": [
+                "1. QUALITY POLICY AND OBJECTIVES",
+                "2. QUALITY STANDARDS AND METRICS",
+                "3. QUALITY PLANNING",
+                "4. QUALITY ASSURANCE ACTIVITIES",
+                "5. QUALITY CONTROL ACTIVITIES",
+                "6. QUALITY IMPROVEMENT PROCESS",
+                "7. QUALITY ROLES AND RESPONSIBILITIES",
+                "8. QUALITY TOOLS AND TECHNIQUES",
+                "9. QUALITY DOCUMENTATION",
+                "10. QUALITY MONITORING AND REPORTING"
+            ]
         }
+    }
+    
+    template_info = templates_map.get(doc_type, {
+        "title": doc_type,
+        "sections": ["1. INTRODUCTION", "2. OBJECTIVES", "3. SCOPE", "4. METHODOLOGY", "5. DELIVERABLES", "6. CONCLUSION"]
+    })
+    
+    # Generate template content
+    template_content = f"""# {template_info['title']}
+
+**Project:** {project_context.get('name', 'Project Name')}
+**Project Type:** {project_context.get('type', 'Project Type')}
+**Date:** {{{{ current_date }}}}
+**Version:** 1.0
+
+---
+
+## Document Information
+- **Document Type:** {template_info['title']}
+- **Project Description:** {project_context.get('description', 'Project Description')}
+- **Generated:** AI Template for {project_context.get('name', 'Project')}
+
+---
+
+"""
+    
+    # Add sections with placeholders
+    for section in template_info['sections']:
+        template_content += f"## {section}\n\n"
+        template_content += f"{{{{ {section.lower().replace(' ', '_').replace('.', '').replace('/', '_')} }}}}\n\n"
+        template_content += "---\n\n"
+    
+    # Add project-specific requirements if available
+    if project_context.get('functional_reqs'):
+        template_content += "## FUNCTIONAL REQUIREMENTS\n\n"
+        for req in project_context['functional_reqs'][:3]:  # First 3 requirements
+            template_content += f"- {req}\n"
+        template_content += "\n---\n\n"
+    
+    if project_context.get('non_functional_reqs'):
+        template_content += "## NON-FUNCTIONAL REQUIREMENTS\n\n"
+        for req in project_context['non_functional_reqs'][:3]:  # First 3 requirements
+            template_content += f"- {req}\n"
+        template_content += "\n---\n\n"
+    
+    if project_context.get('conditions'):
+        template_content += "## CONDITIONS AND CONSTRAINTS\n\n"
+        for condition in project_context['conditions'][:3]:  # First 3 conditions
+            template_content += f"- {condition}\n"
+        template_content += "\n---\n\n"
+    
+    template_content += """
+## TEMPLATE USAGE NOTES
+
+This template was generated automatically based on your project information. Please:
+
+1. Replace placeholder sections ({{{{ ... }}}}) with actual content
+2. Customize sections as needed for your specific project
+3. Add or remove sections based on project requirements
+4. Update version number and date as document evolves
+
+---
+
+**Template Generated:** {current_date}
+**For Project:** {project_name}
+""".format(current_date=datetime.now().strftime("%Y-%m-%d %H:%M"), 
+           project_name=project_context.get('name', 'Unknown Project'))
+    
+    return template_content
+
+def save_template_to_folder(template_content: str, doc_type: str, template_folder: str, source_file=None) -> str:
+    """Save template content to the project template folder"""
+    # Create safe filename
+    safe_doc_type = "".join(c for c in doc_type if c.isalnum() or c in (' ', '-', '_', '(', ')')).rstrip()
+    safe_doc_type = safe_doc_type.replace(' ', '_').replace('(', '').replace(')', '')
+    
+    if source_file:
+        # Use original filename if from uploaded file
+        file_extension = source_file.name.split('.')[-1] if '.' in source_file.name else 'txt'
+        filename = f"{safe_doc_type}_template.{file_extension}"
+    else:
+        # AI generated template
+        filename = f"{safe_doc_type}_AI_template.md"
+    
+    file_path = os.path.join(template_folder, filename)
+    
+    # Save the template
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write(template_content)
+    
+    return file_path
+
+def process_document_templates(project_id: int, project_context: Dict, template_selections: Dict) -> Dict:
+    """Process and save all document templates for a project"""
+    result = {
+        'success': True,
+        'template_folder': '',
+        'created_templates': [],
+        'errors': []
+    }
+    
+    try:
+        # Create project template folder
+        template_folder = create_project_template_folder(project_context['name'])
+        result['template_folder'] = template_folder
+        
+        for doc_type, selection in template_selections.items():
+            try:
+                if selection['source'] == 'AI Generated':
+                    # Generate AI template
+                    template_content = generate_ai_template(doc_type, project_context)
+                    file_path = save_template_to_folder(template_content, doc_type, template_folder)
+                    result['created_templates'].append({
+                        'doc_type': doc_type,
+                        'source': 'AI Generated',
+                        'file_path': file_path,
+                        'filename': os.path.basename(file_path)
+                    })
+                    
+                elif selection['source'] == 'Upload Template' and selection['template_file']:
+                    # Process uploaded template
+                    uploaded_file = selection['template_file']
+                    
+                    # Read file content
+                    if uploaded_file.name.endswith(('.txt', '.md')):
+                        template_content = uploaded_file.read().decode('utf-8')
+                    elif uploaded_file.name.endswith('.json'):
+                        template_content = uploaded_file.read().decode('utf-8')
+                    elif uploaded_file.name.endswith(('.docx', '.doc')):
+                        # Extract text from Word document
+                        try:
+                            import docx
+                            doc = docx.Document(uploaded_file)
+                            template_content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                        except Exception:
+                            template_content = f"Word document template: {uploaded_file.name}\n[Content extraction not available]"
+                    else:
+                        template_content = f"Template file: {uploaded_file.name}\n[Binary file - content not extracted]"
+                    
+                    # Save uploaded template
+                    file_path = save_template_to_folder(template_content, doc_type, template_folder, uploaded_file)
+                    result['created_templates'].append({
+                        'doc_type': doc_type,
+                        'source': 'User Upload',
+                        'file_path': file_path,
+                        'filename': os.path.basename(file_path),
+                        'original_name': uploaded_file.name
+                    })
+                
+            except Exception as e:
+                result['errors'].append(f"Error processing {doc_type}: {str(e)}")
+        
+        # Process templates with RAG service if available
+        if st.session_state.rag_service.is_available():
+            for template_info in result['created_templates']:
+                try:
+                    # Read the saved template file
+                    with open(template_info['file_path'], 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    
+                    # Process with RAG (mark as template)
+                    rag_result = st.session_state.rag_service.add_text_content(
+                        project_id=project_id,
+                        content=content,
+                        filename=template_info['filename'],
+                        file_type='md' if template_info['file_path'].endswith('.md') else 'txt',
+                        is_template=True
+                    )
+                    
+                    if not rag_result.get('success'):
+                        result['errors'].append(f"RAG processing failed for {template_info['filename']}")
+                        
+                except Exception as e:
+                    result['errors'].append(f"RAG processing error for {template_info['filename']}: {str(e)}")
+    
+    except Exception as e:
+        result['success'] = False
+        result['errors'].append(f"Template processing failed: {str(e)}")
+    
+    return result
 
 def load_project_template(uploaded_files):
     """Load project template from uploaded file(s)"""
@@ -356,28 +746,44 @@ def load_project_template(uploaded_files):
         
         for uploaded_file in uploaded_files:
             try:
+                # Check file size (Streamlit default limit is around 200MB)
+                if hasattr(uploaded_file, 'size') and uploaded_file.size > 200 * 1024 * 1024:  # 200MB
+                    st.error(f"❌ File {uploaded_file.name} is too large (>200MB). Please use a smaller file.")
+                    continue
+                
                 file_extension = uploaded_file.name.lower().split('.')[-1]
                 
+                # Reset file pointer to beginning
+                uploaded_file.seek(0)
+                
                 if file_extension == 'json':
-                    content = json.loads(uploaded_file.read().decode('utf-8'))
-                    # Merge JSON content with existing template
-                    for key in ['name', 'type', 'description']:
-                        if content.get(key) and not combined_template.get(key):
-                            combined_template[key] = content[key]
-                    
-                    for key in ['functional_reqs', 'non_functional_reqs', 'conditions', 'recommended_docs']:
-                        if content.get(key):
-                            combined_template[key].extend(content[key])
-                    
-                    st.success(f"✅ JSON template loaded from {uploaded_file.name}")
+                    try:
+                        content = json.loads(uploaded_file.read().decode('utf-8'))
+                        # Merge JSON content with existing template
+                        for key in ['name', 'type', 'description']:
+                            if content.get(key) and not combined_template.get(key):
+                                combined_template[key] = content[key]
+                        
+                        for key in ['functional_reqs', 'non_functional_reqs', 'conditions', 'recommended_docs']:
+                            if content.get(key):
+                                combined_template[key].extend(content[key])
+                        
+                        st.success(f"✅ JSON template loaded from {uploaded_file.name}")
+                    except json.JSONDecodeError as je:
+                        st.error(f"❌ Invalid JSON format in {uploaded_file.name}: {str(je)}")
+                        continue
                     
                 elif file_extension in ['txt', 'md']:
-                    content = uploaded_file.read().decode('utf-8')
-                    combined_template['template_content'].append({
-                        'filename': uploaded_file.name,
-                        'content': content
-                    })
-                    st.success(f"✅ Text content loaded from {uploaded_file.name}")
+                    try:
+                        content = uploaded_file.read().decode('utf-8')
+                        combined_template['template_content'].append({
+                            'filename': uploaded_file.name,
+                            'content': content
+                        })
+                        st.success(f"✅ Text content loaded from {uploaded_file.name}")
+                    except UnicodeDecodeError as ue:
+                        st.error(f"❌ Cannot read {uploaded_file.name}: {str(ue)}. Please ensure the file uses UTF-8 encoding.")
+                        continue
                     
                 elif file_extension in ['xlsx', 'xls']:
                     # Extract content from Excel files
@@ -411,12 +817,31 @@ def load_project_template(uploaded_files):
                             for paragraph in doc.paragraphs:
                                 word_content += paragraph.text + "\n"
                             
-                            # Extract tables
-                            for table in doc.tables:
-                                word_content += "\n--- Table ---\n"
-                                for row in table.rows:
-                                    row_text = " | ".join([cell.text for cell in row.cells])
-                                    word_content += row_text + "\n"
+                            # Extract tables with enhanced error handling
+                            try:
+                                for table in doc.tables:
+                                    word_content += "\n--- Table ---\n"
+                                    for row_idx, row in enumerate(table.rows):
+                                        try:
+                                            # Handle potential missing cells or malformed table structure
+                                            cells_text = []
+                                            for cell in row.cells:
+                                                if cell and hasattr(cell, 'text'):
+                                                    cells_text.append(cell.text.strip())
+                                                else:
+                                                    cells_text.append("[empty]")
+                                            
+                                            row_text = " | ".join(cells_text)
+                                            if row_text.strip() and row_text != " | ".join(["[empty]"] * len(cells_text)):
+                                                word_content += row_text + "\n"
+                                        except Exception as cell_error:
+                                            # Skip problematic rows and continue
+                                            word_content += f"[Table row {row_idx}: parsing error]\n"
+                                            continue
+                                    word_content += "\n"
+                            except Exception as table_error:
+                                # If table parsing fails completely, continue with text content
+                                word_content += f"\n--- Tables could not be parsed: {str(table_error)} ---\n"
                             
                             combined_template['template_content'].append({
                                 'filename': uploaded_file.name,
@@ -432,11 +857,26 @@ def load_project_template(uploaded_files):
                             })
                             
                     except Exception as e:
+                        # More robust error handling - still capture content even with parsing errors
                         st.warning(f"⚠️ Could not fully parse Word file {uploaded_file.name}: {str(e)}")
-                        combined_template['template_content'].append({
-                            'filename': uploaded_file.name,
-                            'content': f"Word document: {uploaded_file.name} (parsing error: {str(e)})"
-                        })
+                        try:
+                            # Try basic text extraction as fallback
+                            doc = docx.Document(uploaded_file)
+                            basic_content = ""
+                            for paragraph in doc.paragraphs:
+                                basic_content += paragraph.text + "\n"
+                            
+                            combined_template['template_content'].append({
+                                'filename': uploaded_file.name,
+                                'content': basic_content or f"Word document: {uploaded_file.name} (partial parsing)"
+                            })
+                            st.info(f"📄 Basic text extracted from {uploaded_file.name} (tables may be missing)")
+                        except Exception:
+                            # Final fallback - just store metadata
+                            combined_template['template_content'].append({
+                                'filename': uploaded_file.name,
+                                'content': f"Word document: {uploaded_file.name} (parsing error: {str(e)})"
+                            })
                     
                 elif file_extension in ['pptx', 'ppt']:
                     # Extract content from PowerPoint presentations
@@ -492,8 +932,51 @@ def load_project_template(uploaded_files):
                             'content': f"PDF document: {uploaded_file.name} (parsing error: {str(e)})"
                         })
                     
+                elif file_extension in ['csv']:
+                    # Extract content from CSV files
+                    try:
+                        csv_data = pd.read_csv(uploaded_file)
+                        csv_content = f"\n--- CSV Data from {uploaded_file.name} ---\n"
+                        csv_content += csv_data.to_string(index=False)
+                        
+                        combined_template['template_content'].append({
+                            'filename': uploaded_file.name,
+                            'content': csv_content
+                        })
+                        st.success(f"✅ CSV data loaded from {uploaded_file.name}")
+                    except Exception as e:
+                        st.warning(f"⚠️ Could not parse CSV {uploaded_file.name}: {e}")
+                        # Try to read as plain text
+                        try:
+                            uploaded_file.seek(0)  # Reset file pointer
+                            content = uploaded_file.read().decode('utf-8')
+                            combined_template['template_content'].append({
+                                'filename': uploaded_file.name,
+                                'content': content
+                            })
+                            st.info(f"📝 CSV loaded as text from {uploaded_file.name}")
+                        except Exception as e2:
+                            st.error(f"❌ Failed to load {uploaded_file.name}: {e2}")
+                
                 else:
-                    st.error(f"❌ Unsupported file format: {uploaded_file.name}. Please upload JSON, TXT, MD, Excel, Word, PowerPoint, or PDF files.")
+                    # Try to read as text for any other file types
+                    try:
+                        content = uploaded_file.read().decode('utf-8')
+                        combined_template['template_content'].append({
+                            'filename': uploaded_file.name,
+                            'content': content
+                        })
+                        st.success(f"✅ Text content loaded from {uploaded_file.name}")
+                    except UnicodeDecodeError:
+                        # For binary files, store metadata only
+                        file_size = len(uploaded_file.getvalue()) if hasattr(uploaded_file, 'getvalue') else 0
+                        combined_template['template_content'].append({
+                            'filename': uploaded_file.name,
+                            'content': f"[Binary file: {uploaded_file.name}, Size: {file_size} bytes, Type: {file_extension.upper()}]"
+                        })
+                        st.info(f"📄 Binary file metadata stored for {uploaded_file.name}")
+                    except Exception as e:
+                        st.warning(f"⚠️ Could not read {uploaded_file.name}: {str(e)}")
                     
             except Exception as e:
                 st.error(f"❌ Error reading file {uploaded_file.name}: {str(e)}")
@@ -518,50 +1001,122 @@ def generate_ai_content(prompt: str, project_context: Optional[Dict] = None) -> 
 
 def main():
     """Main application function"""
-    apply_bosch_styling()
-    
-    # Authentication check
-    if not authenticate_user():
+    try:
+        # Apply styling
+        apply_bosch_styling()
+        
+        # Authentication check
+        if not authenticate_user():
+            return
+        
+        # Show header
+        show_bosch_header()
+        
+        # Initialize app
+        initialize_app()
+        
+        # Show current user role and logout button
+        user_role = st.session_state.get('user_role', 'Project team')
+        role_color = "#28A745" if user_role == 'PM' else "#17A2B8"
+        
+        # Create columns for role badge and logout button
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <div style="text-align: right; margin-bottom: 1rem;">
+                <span style="background-color: {role_color}; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.9rem;">
+                    👤 {user_role}
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            if st.button("🚪 Logout", type="secondary", use_container_width=True):
+                # Clear all session state
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.rerun()
+        
+        # Create tabs based on user role
+        if user_role == 'PM':
+            # PM has access to all tabs
+            tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+                "🏠 Dashboard", 
+                "🆕 New Project", 
+                "✏️ Edit Projects",
+                "📝 Generate Document", 
+                "👥 Workflow Management", 
+                "📊 Project Overview",
+                "💬 AI Assistant",
+                "⚙️ Settings"
+            ])
+        else:
+            # Project team has limited access (includes Settings now)
+            tab1, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+                "🏠 Dashboard",
+                "📝 Generate Document", 
+                "👥 Workflow Management", 
+                "📊 Project Overview",
+                "💬 AI Assistant",
+                "⚙️ Settings"
+            ])
+            # Create placeholder tabs to maintain structure
+            tab2 = tab3 = None
+        
+    except Exception as e:
+        st.error(f"❌ Application Startup Error: {str(e)}")
+        st.exception(e)
         return
     
-    show_bosch_header()
-    initialize_app()
-    
-    # Tab navigation instead of sidebar
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-        "🏠 Dashboard", 
-        "🆕 New Project", 
-        "✏️ Edit Projects",
-        "📝 Generate Document", 
-        "👥 Workflow Management", 
-        "📊 Project Overview",
-        "💬 AI Assistant",
-        "⚙️ Settings"
-    ])
-    
+    # Tab content with role-based access control
     with tab1:
         show_dashboard()
     
-    with tab2:
-        show_new_project()
+    if tab2 is not None:  # PM only
+        with tab2:
+            if check_access('PM'):
+                show_new_project()
+            else:
+                show_access_denied("project creation")
     
-    with tab3:
-        show_edit_projects()
+    if tab3 is not None:  # PM only
+        with tab3:
+            if check_access('PM'):
+                show_edit_projects()
+            else:
+                show_access_denied("project editing")
     
     with tab4:
-        show_document_generation()
+        if check_access(['generate_document']):
+            show_document_generation()
+        else:
+            show_access_denied("document generation")
     
     with tab5:
-        show_workflow_management()
+        if check_access(['view_workflow']):
+            show_workflow_management()
+        else:
+            show_access_denied("workflow management")
     
     with tab6:
-        show_project_overview()
+        if check_access(['project_overview']):
+            show_project_overview()
+        else:
+            show_access_denied("project overview")
     
     with tab7:
-        show_ai_assistant()
+        if check_access(['ai_assistant']):
+            show_ai_assistant()
+        else:
+            show_access_denied("AI assistant")
     
-    with tab8:
-        show_settings()
+    if tab8 is not None:  # PM only
+        with tab8:
+            if check_access('PM'):
+                show_settings()
+            else:
+                show_access_denied("system settings")
 
 def show_dashboard():
     """Display main dashboard with persistent data"""
@@ -650,13 +1205,25 @@ def show_new_project():
     """Show new project creation form with template upload"""
     st.title("🆕 Create New Project")
     
+    # Add a reset button for form state
+    col_reset, col_spacer = st.columns([1, 3])
+    with col_reset:
+        if st.button("🔄 Reset Form", help="Clear all selections and start fresh"):
+            # Clear session state for new project
+            if 'new_project_doc_selections' in st.session_state:
+                del st.session_state.new_project_doc_selections
+            if 'doc_template_selections' in st.session_state:
+                del st.session_state.doc_template_selections
+            st.rerun()
+    
     # Project template upload section
     st.subheader("📁 Project Template(s) (Optional)")
     uploaded_files = st.file_uploader(
         "Upload project template file(s)", 
         type=['json', 'txt', 'md', 'xlsx', 'xls', 'docx', 'doc', 'pptx', 'ppt', 'pdf'],
         help="Upload one or more template files to pre-fill project requirements. Supports: JSON, TXT, Markdown, Excel, Word, PowerPoint, PDF",
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        key="project_template_upload"
     )
     
     template_data = None
@@ -687,6 +1254,65 @@ def show_new_project():
                 with st.expander("🔍 Detailed Template Data (Debug)", expanded=False):
                     st.json({k: v for k, v in template_data.items() if k != 'template_content'})
     
+    # Project data upload section (ENHANCED)
+    st.subheader("📂 Project Data (Optional)")
+    st.info("💡 **Project Data** helps the AI Assistant provide more accurate and context-aware responses by understanding your specific project content. Upload individual files or specify a folder path to include all project-related documents.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**📁 Upload Project Data Files:**")
+        project_data_files = st.file_uploader(
+            "Select multiple files of any type", 
+            help="Supports: PDF, Word, Excel, PowerPoint, Text, Markdown, Images, Code files, and more. All files will be processed for AI enhancement.",
+            accept_multiple_files=True,
+            key="project_data_files"
+        )
+        
+        if project_data_files:
+            st.success(f"✅ Selected {len(project_data_files)} files:")
+            for file in project_data_files:
+                file_size = len(file.getvalue()) if hasattr(file, 'getvalue') else 0
+                st.write(f"• {file.name} ({file_size:,} bytes)")
+    
+    with col2:
+        st.write("**📂 Or Specify Project Data Folder:**")
+        project_data_folder = st.text_input(
+            "Project data folder path (optional)",
+            placeholder="C:/path/to/project/data/folder",
+            help="All files in this folder and subfolders will be processed recursively. Supports any file type."
+        )
+        
+        # Folder validation
+        if project_data_folder:
+            if os.path.exists(project_data_folder):
+                if os.path.isdir(project_data_folder):
+                    # Count files in folder
+                    file_count = sum(len(files) for _, _, files in os.walk(project_data_folder))
+                    st.success(f"✅ Folder found: {file_count} files will be processed")
+                else:
+                    st.error("❌ Path exists but is not a folder")
+            else:
+                st.error("❌ Folder path does not exist")
+    
+    # Show RAG service status with more detail
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.session_state.rag_service.is_available():
+            st.success("🧠 **RAG Service:** Available")
+            st.caption("Files will be processed and vectorized for AI enhancement")
+        else:
+            st.warning("⚠️ **RAG Service:** Not available")
+            st.caption("Files will be stored but not processed for AI")
+    
+    with col2:
+        st.info("**Supported File Types:**")
+        st.caption("📄 Documents: PDF, Word, Excel, PowerPoint")
+        st.caption("📝 Text: TXT, MD, JSON, CSV, XML")  
+        st.caption("💻 Code: PY, JS, HTML, CSS, SQL, etc.")
+        st.caption("🖼️ Images: PNG, JPG, GIF (OCR)")
+        st.caption("📊 Data: Any structured/unstructured files")
+    
     st.subheader("📋 Project Information")
     
     project_types = [
@@ -698,6 +1324,117 @@ def show_new_project():
         "Custom"
     ]
     
+    # Document Type Selection (Outside Form)
+    st.subheader("📋 Document Types & Template Sources")
+    
+    document_types = [
+        "Project Management Plan (PMP)",
+        "Technical Concept Document (TCD)",
+        "Configuration Management Plan",
+        "Communication Management Plan",
+        "Risk Management Plan",
+        "Quality Plan"
+    ]
+    default_docs = template_data.get('recommended_docs', document_types[:3]) if template_data else document_types[:3]
+    
+    # Enhanced document type selection with template options
+    st.write("📋 **Select Document Types and Template Sources:**")
+    st.info("💡 For each document type, choose to use an existing template file or generate with AI.")
+    
+    # Initialize session state for document selections if not exists
+    if 'new_project_doc_selections' not in st.session_state:
+        st.session_state.new_project_doc_selections = {}
+        # Set defaults based on template data
+        for doc_type in document_types:
+            is_default = doc_type in default_docs
+            st.session_state.new_project_doc_selections[doc_type] = {
+                'include': is_default,
+                'source': 'AI Generated'
+            }
+    
+    # Initialize session state for template selections
+    if 'doc_template_selections' not in st.session_state:
+        st.session_state.doc_template_selections = {}
+    
+    selected_docs_with_templates = {}
+    
+    for doc_type in document_types:
+        # Get current state or use default
+        current_state = st.session_state.new_project_doc_selections.get(doc_type, {
+            'include': doc_type in default_docs,
+            'source': 'AI Generated'
+        })
+        
+        # Document type selection with session state
+        include_doc = st.checkbox(
+            f"📄 {doc_type}",
+            value=current_state.get('include', False),
+            key=f"include_{doc_type}"
+        )
+        
+        # Update session state based on checkbox
+        st.session_state.new_project_doc_selections[doc_type] = st.session_state.new_project_doc_selections.get(doc_type, {})
+        st.session_state.new_project_doc_selections[doc_type]['include'] = include_doc
+        
+        if include_doc:
+            # Template source selection
+            col_a, col_b = st.columns([1, 2])
+            
+            with col_a:
+                current_source = st.session_state.new_project_doc_selections[doc_type].get('source', 'AI Generated')
+                template_source = st.radio(
+                    f"Template source for {doc_type}:",
+                    ["AI Generated", "Upload Template"],
+                    index=0 if current_source == "AI Generated" else 1,
+                    key=f"source_{doc_type}",
+                    help="Choose AI Generated for automatic template creation, or Upload Template to use your own file."
+                )
+                
+                # Update session state for source selection
+                st.session_state.new_project_doc_selections[doc_type]['source'] = template_source
+        
+            with col_b:
+                template_file = None
+                if template_source == "Upload Template":
+                    template_file = st.file_uploader(
+                        f"Upload template for {doc_type}",
+                        type=['docx', 'doc', 'txt', 'md', 'json'],
+                        key=f"template_{doc_type}",
+                        help="Upload a template file that will be used as the base for this document type."
+                    )
+                    
+                    if template_file:
+                        st.success(f"✅ Template uploaded: {template_file.name}")
+                else:
+                    st.info("🤖 AI will generate a professional template based on your project details.")
+        
+            # Store the selection
+            selected_docs_with_templates[doc_type] = {
+                'source': template_source,
+                'template_file': template_file
+            }
+        
+        # Store template selections for database
+        if include_doc:
+            st.session_state.doc_template_selections[doc_type] = selected_docs_with_templates.get(doc_type, {})
+    
+    # Show summary of document selections
+    selected_count = sum(1 for doc_type, state in st.session_state.new_project_doc_selections.items() if state.get('include', False))
+    if selected_count > 0:
+        st.success(f"📋 {selected_count} document type(s) selected for template creation")
+        
+        with st.expander("📊 Document Selection Summary", expanded=False):
+            for doc_type, state in st.session_state.new_project_doc_selections.items():
+                if state.get('include', False):
+                    source = state.get('source', 'AI Generated')
+                    if source == "AI Generated":
+                        st.write(f"• **{doc_type}:** 🤖 AI Generated")
+                    else:
+                        st.write(f"• **{doc_type}:** 📄 User Template")
+    else:
+        st.info("💡 No document types selected. You can add document templates later.")
+    
+    # Basic Project Form
     with st.form("new_project_form"):
         col1, col2 = st.columns(2)
         
@@ -751,28 +1488,15 @@ def show_new_project():
                 value=conditions_default,
                 placeholder="Budget constraints must be observed\nCompliance with company standards required"
             )
-            
-            st.write("**Document Types to Generate:**")
-            document_types = [
-                "Project Management Plan (PMP)",
-                "Technical Concept Document (TCD)",
-                "Configuration Management Plan",
-                "Communication Management Plan",
-                "Risk Management Plan",
-                "Quality Plan"
-            ]
-            default_docs = template_data.get('recommended_docs', document_types[:3]) if template_data else document_types[:3]
-            recommended_docs = st.multiselect(
-                "Select document types", 
-                document_types, 
-                default=default_docs
-            )
         
         # Submit project
         submitted = st.form_submit_button("✅ Create Project", type="primary")
         
         if submitted:
             if project_name and project_type and description:
+                # Get recommended docs from template selections
+                recommended_docs = list(st.session_state.doc_template_selections.keys()) if st.session_state.doc_template_selections else []
+                
                 # Create project
                 project = {
                     "name": project_name,
@@ -788,8 +1512,97 @@ def show_new_project():
                 project_id = st.session_state.db.save_project(project)
                 project['id'] = project_id
                 
+                # Process project data files and folder
+                files_processed = 0
+                failed_files = []
+                
+                with st.spinner("🔄 Processing project data files..."):
+                    # Process uploaded files
+                    if project_data_files:
+                        for uploaded_file in project_data_files:
+                            result = st.session_state.rag_service.process_file(
+                                project_id=project_id,
+                                file_obj=uploaded_file,
+                                filename=uploaded_file.name,
+                                is_template=False
+                            )
+                            if result["success"]:
+                                files_processed += 1
+                            else:
+                                failed_files.append(f"{uploaded_file.name}: {result.get('error', 'Unknown error')}")
+                    
+                    # Process folder if specified
+                    if project_data_folder and os.path.exists(project_data_folder):
+                        folder_result = st.session_state.rag_service.process_folder(
+                            project_id=project_id,
+                            folder_path=project_data_folder,
+                            is_template=False
+                        )
+                        if folder_result["success"]:
+                            files_processed += folder_result["successful_files"]
+                            if folder_result["failed_files"] > 0:
+                                failed_files.append(f"Failed to process {folder_result['failed_files']} files from folder")
+                    elif project_data_folder:
+                        failed_files.append(f"Folder path does not exist: {project_data_folder}")
+                
+                # Process document templates
+                template_results = {'created_templates': [], 'errors': [], 'template_folder': ''}
+                if st.session_state.doc_template_selections:
+                    with st.spinner("📋 Creating document templates..."):
+                        # Get recommended docs from template selections
+                        recommended_docs = list(st.session_state.doc_template_selections.keys())
+                        
+                        # Update project with recommended docs
+                        st.session_state.db.update_project(project_id, {"recommended_docs": recommended_docs})
+                        
+                        # Process templates
+                        template_results = process_document_templates(
+                            project_id, 
+                            project, 
+                            st.session_state.doc_template_selections
+                        )
+                
                 st.success(f"✅ Project '{project_name}' created successfully!")
-                st.info("You can now generate documents for this project in the 'Generate Document' tab.")
+                
+                # Enhanced template processing feedback
+                if template_results['created_templates']:
+                    st.success(f"📋 Created {len(template_results['created_templates'])} document templates!")
+                    st.info(f"📁 Templates saved to: `{template_results['template_folder']}`")
+                    
+                    # Show template details
+                    with st.expander("📋 Template Details", expanded=False):
+                        for template in template_results['created_templates']:
+                            icon = "🤖" if template['source'] == 'AI Generated' else "📤"
+                            st.write(f"{icon} **{template['doc_type']}** - {template['filename']}")
+                            st.caption(f"Source: {template['source']} | Path: {template['file_path']}")
+                
+                if template_results['errors']:
+                    st.warning("⚠️ Some templates could not be created:")
+                    for error in template_results['errors'][:3]:
+                        st.write(f"• {error}")
+                
+                # Enhanced file processing feedback
+                if files_processed > 0:
+                    st.success(f"🧠 Successfully processed {files_processed} project data file(s) for AI enhancement!")
+                    st.info("💡 These files will now help the AI Assistant provide more relevant and context-aware responses.")
+                
+                if failed_files:
+                    st.warning("⚠️ Some files could not be processed:")
+                    for error in failed_files[:5]:  # Show first 5 errors
+                        st.write(f"• {error}")
+                    if len(failed_files) > 5:
+                        st.write(f"... and {len(failed_files) - 5} more errors")
+                
+                if files_processed == 0 and not failed_files:
+                    st.info("📂 Project created without additional data files. You can add files later in the 'Edit Projects' tab.")
+                
+                # Clear template selections after successful creation
+                if 'doc_template_selections' in st.session_state:
+                    del st.session_state.doc_template_selections
+                if 'new_project_doc_selections' in st.session_state:
+                    del st.session_state.new_project_doc_selections
+                
+                st.success("🎉 Project created successfully!")
                 
                 # Force refresh to update other tabs
                 time.sleep(1)  # Brief pause
@@ -823,7 +1636,170 @@ def show_edit_projects():
         selected_project = project_options[selected_project_name]
         
         if selected_project:
-            st.info(f"**Editing Project:** {selected_project['name']} | **Created:** {selected_project.get('created_at', 'Unknown')[:10]}")
+            # Enhanced project information display
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.info(f"**Project:** {selected_project['name']}")
+            with col2:
+                st.info(f"**Type:** {selected_project['type']}")
+            with col3:
+                created_date = selected_project.get('created_at', 'Unknown')[:10] if selected_project.get('created_at') else 'Unknown'
+                st.info(f"**Created:** {created_date}")
+            
+            # Show existing project data files with enhanced management
+            st.subheader("📂 Current Project Data Files")
+            existing_files = st.session_state.db.get_project_data_files(selected_project['id'])
+            
+            if existing_files:
+                # File statistics
+                total_files = len(existing_files)
+                template_files = len([f for f in existing_files if f['is_template']])
+                data_files = total_files - template_files
+                total_size = sum(f['file_size'] for f in existing_files)
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Files", total_files)
+                with col2:
+                    st.metric("Data Files", data_files)
+                with col3:
+                    st.metric("Template Files", template_files)
+                with col4:
+                    st.metric("Total Size", f"{total_size:,} bytes")
+                
+                st.write("---")
+                
+                # Enhanced file display with better organization
+                st.write("**File Management:**")
+                
+                # Group files by type
+                file_groups = {'Data Files': [], 'Template Files': []}
+                for file_info in existing_files:
+                    if file_info['is_template']:
+                        file_groups['Template Files'].append(file_info)
+                    else:
+                        file_groups['Data Files'].append(file_info)
+                
+                for group_name, files in file_groups.items():
+                    if files:
+                        with st.expander(f"📁 {group_name} ({len(files)} files)", expanded=True):
+                            for file_info in files:
+                                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
+                                
+                                with col1:
+                                    # Enhanced file type icons
+                                    file_type_icons = {
+                                        'pdf': '📕', 'docx': '📄', 'doc': '📄', 
+                                        'xlsx': '📊', 'xls': '📊', 'pptx': '📊', 'ppt': '📊',
+                                        'txt': '📝', 'md': '📝', 'json': '🔧', 'csv': '📈',
+                                        'py': '🐍', 'js': '🟨', 'html': '🌐', 'css': '🎨',
+                                        'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️',
+                                        'xml': '📋', 'sql': '🗃️'
+                                    }
+                                    icon = file_type_icons.get(file_info['file_type'], '📄')
+                                    
+                                    st.write(f"{icon} **{file_info['filename']}**")
+                                    st.caption(f"Size: {file_info['file_size']:,} bytes | Type: {file_info['file_type'].upper()} | Added: {file_info['created_at'][:16]}")
+                                
+                                with col2:
+                                    # Show content preview with enhanced formatting
+                                    if st.button("👀 Preview", key=f"preview_{file_info['id']}", help="View file content"):
+                                        st.session_state[f"show_preview_{file_info['id']}"] = True
+                                
+                                with col3:
+                                    # Download file content (if available)
+                                    if st.button("💾 Export", key=f"export_{file_info['id']}", help="Download file content"):
+                                        content = file_info.get('content', '')
+                                        if content:
+                                            st.download_button(
+                                                label="Download",
+                                                data=content,
+                                                file_name=file_info['filename'],
+                                                mime="text/plain",
+                                                key=f"download_{file_info['id']}"
+                                            )
+                                        else:
+                                            st.warning("No content available for download")
+                                
+                                with col4:
+                                    # Delete file button with confirmation
+                                    if st.button("🗑️ Remove", key=f"delete_{file_info['id']}", type="secondary", help="Remove file from project"):
+                                        if st.session_state.get(f"confirm_delete_{file_info['id']}", False):
+                                            st.session_state.db.delete_project_data_file(file_info['id'])
+                                            st.success(f"✅ Removed {file_info['filename']}")
+                                            st.rerun()
+                                        else:
+                                            st.session_state[f"confirm_delete_{file_info['id']}"] = True
+                                            st.warning("Click again to confirm deletion")
+                                
+                                # Show preview if requested
+                                if st.session_state.get(f"show_preview_{file_info['id']}", False):
+                                    with st.expander(f"📖 Content Preview - {file_info['filename']}", expanded=True):
+                                        content = file_info.get('content', '')
+                                        if content:
+                                            # Show preview with syntax highlighting if possible
+                                            if file_info['file_type'] in ['json', 'py', 'js', 'html', 'css', 'xml']:
+                                                st.code(content[:2000] + "..." if len(content) > 2000 else content, 
+                                                        language=file_info['file_type'])
+                                            else:
+                                                st.text_area("Content Preview", 
+                                                           value=content[:2000] + "..." if len(content) > 2000 else content, 
+                                                           height=300, disabled=True)
+                                            
+                                            if len(content) > 2000:
+                                                st.caption(f"Showing first 2000 characters of {len(content)} total")
+                                        else:
+                                            st.warning("No content available for preview")
+                                        
+                                        # Close preview button
+                                        if st.button("✖️ Close Preview", key=f"close_preview_{file_info['id']}"):
+                                            st.session_state[f"show_preview_{file_info['id']}"] = False
+                                            st.rerun()
+                
+                st.divider()
+            else:
+                st.info("📂 No project data files found. Add some files below to enhance AI responses for this project.")
+            
+            # Add new project data files section with enhanced interface
+            st.subheader("📂 Add New Project Data")
+            st.info("💡 Add more files to improve the AI Assistant's understanding of your project context.")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**📁 Upload New Files:**")
+                new_project_data_files = st.file_uploader(
+                    "Select files to add to project", 
+                    help="Upload any files containing project information. All file types are supported.",
+                    accept_multiple_files=True,
+                    key="edit_project_data_files"
+                )
+                
+                if new_project_data_files:
+                    st.success(f"✅ {len(new_project_data_files)} file(s) ready to upload:")
+                    for file in new_project_data_files:
+                        file_size = len(file.getvalue()) if hasattr(file, 'getvalue') else 0
+                        st.write(f"• {file.name} ({file_size:,} bytes)")
+            
+            with col2:
+                st.write("**📂 Or Specify Folder Path:**")
+                new_project_data_folder = st.text_input(
+                    "Additional project data folder path",
+                    placeholder="C:/path/to/additional/project/data",
+                    help="All files in this folder and subfolders will be processed recursively.",
+                    key="edit_project_data_folder"
+                )
+                
+                # Folder validation for edit mode
+                if new_project_data_folder:
+                    if os.path.exists(new_project_data_folder):
+                        if os.path.isdir(new_project_data_folder):
+                            file_count = sum(len(files) for _, _, files in os.walk(new_project_data_folder))
+                            st.success(f"✅ Folder found: {file_count} files will be processed")
+                        else:
+                            st.error("❌ Path exists but is not a folder")
+                    else:
+                        st.error("❌ Folder path does not exist")
             
             # Project template upload section for editing
             st.subheader("📁 Update from Template(s) (Optional)")
@@ -984,8 +1960,54 @@ def show_edit_projects():
                         # Update in database
                         st.session_state.db.update_project(selected_project['id'], updates)
                         
+                        # Process new project data files with enhanced feedback
+                        files_processed = 0
+                        failed_files = []
+                        
+                        with st.spinner("🔄 Processing new project data files..."):
+                            # Process uploaded files
+                            if new_project_data_files:
+                                for uploaded_file in new_project_data_files:
+                                    result = st.session_state.rag_service.process_file(
+                                        project_id=selected_project['id'],
+                                        file_obj=uploaded_file,
+                                        filename=uploaded_file.name,
+                                        is_template=False
+                                    )
+                                    if result["success"]:
+                                        files_processed += 1
+                                    else:
+                                        failed_files.append(f"{uploaded_file.name}: {result.get('error', 'Unknown error')}")
+                            
+                            # Process folder if specified
+                            if new_project_data_folder and os.path.exists(new_project_data_folder):
+                                folder_result = st.session_state.rag_service.process_folder(
+                                    project_id=selected_project['id'],
+                                    folder_path=new_project_data_folder,
+                                    is_template=False
+                                )
+                                if folder_result["success"]:
+                                    files_processed += folder_result["successful_files"]
+                                    if folder_result["failed_files"] > 0:
+                                        failed_files.append(f"Failed to process {folder_result['failed_files']} files from folder")
+                            elif new_project_data_folder:
+                                failed_files.append(f"Folder path does not exist: {new_project_data_folder}")
+                        
                         st.success(f"✅ Project '{project_name}' updated successfully!")
-                        st.info("Changes have been saved. Other tabs will reflect the updated information.")
+                        
+                        # Enhanced update feedback
+                        if files_processed > 0:
+                            st.success(f"🧠 Successfully processed {files_processed} additional project data file(s)!")
+                            st.info("💡 The AI Assistant now has more context about your project.")
+                        
+                        if failed_files:
+                            st.warning("⚠️ Some files could not be processed:")
+                            for error in failed_files[:3]:  # Show first 3 errors
+                                st.write(f"• {error}")
+                            if len(failed_files) > 3:
+                                st.write(f"... and {len(failed_files) - 3} more errors")
+                        
+                        st.info("💾 Changes have been saved. The updated project information is now available across all tabs.")
                         time.sleep(1)
                         st.rerun()
                     else:
@@ -1099,6 +2121,27 @@ def show_document_generation():
     if selected_project:
         st.info(f"**Project:** {selected_project['name']} | **Type:** {selected_project['type']}")
         
+        # Show project data summary
+        project_data_summary = st.session_state.rag_service.get_project_data_summary(selected_project['id'])
+        
+        if project_data_summary['total_files'] > 0:
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("📂 Total Files", project_data_summary['total_files'])
+            with col2:
+                st.metric("🧠 Data Chunks", project_data_summary['total_chunks'])
+            with col3:
+                st.metric("📊 Data Files", project_data_summary['data_files'])
+            with col4:
+                st.metric("🏷️ Templates", project_data_summary['template_files'])
+            
+            if st.session_state.rag_service.is_available():
+                st.success("🧠 RAG-enhanced document generation available!")
+            else:
+                st.warning("⚠️ RAG service unavailable - basic document generation only")
+        else:
+            st.info("💡 No project data files found. Documents will be generated using project requirements only.")
+        
         # Template upload section for document generation
         st.subheader("📁 Additional Template Files (Optional)")
         uploaded_template_files = st.file_uploader(
@@ -1153,8 +2196,21 @@ def show_document_generation():
             if generate_button:
                 with st.spinner("Generating document..."):
                     if use_ai:
-                        # AI-generated content with template context
+                        # AI-generated content with RAG and template context
                         prompt = f"Generate a {document_type} for a {selected_project['type']} project named '{selected_project['name']}'. {custom_requirements}"
+                        
+                        # Add RAG context from project data
+                        rag_context = ""
+                        if st.session_state.rag_service.is_available():
+                            doc_generation_query = f"Create {document_type} for {selected_project['name']} {selected_project['type']} project"
+                            rag_context = st.session_state.rag_service.get_context_for_query(
+                                project_id=selected_project['id'],
+                                query=doc_generation_query,
+                                max_context_length=2500
+                            )
+                        
+                        if rag_context:
+                            prompt += f"\n\nRelevant project data and documentation:\n{rag_context}"
                         
                         # Add template content to AI prompt if available
                         if template_data_doc_gen and template_data_doc_gen.get('template_content'):
@@ -1166,44 +2222,118 @@ def show_document_generation():
                                     prompt += f"\n--- From {filename} ---\n{content}\n"
                         
                         content = generate_ai_content(prompt, selected_project)
+                        
+                        # Add RAG enhancement indicator
+                        if rag_context:
+                            content += "\n\n---\n*🧠 This document was enhanced with project data using RAG (Retrieval-Augmented Generation).*"
+                            
                     else:
-                        # Template-based content with uploaded template data
-                        content = generate_template_content(document_type, selected_project, custom_requirements.split('\n') if custom_requirements else [], template_data_doc_gen)
+                        # Template-based content with uploaded template data and project files
+                        st.info("📋 Using template-based generation (without AI)...")
+                        
+                        # Get project data for template generation
+                        project_files_context = ""
+                        if st.session_state.rag_service.is_available():
+                            doc_generation_query = f"Information for {document_type} {selected_project['name']}"
+                            project_files_context = st.session_state.rag_service.get_context_for_query(
+                                project_id=selected_project['id'],
+                                query=doc_generation_query,
+                                max_context_length=2000
+                            )
+                        
+                        # Use uploaded template data if available
+                        enhanced_template_data = template_data_doc_gen or {'template_content': []}
+                        
+                        # Add project files context if available
+                        if project_files_context:
+                            enhanced_template_data['template_content'].append({
+                                'filename': 'project_data_context.txt',
+                                'content': project_files_context
+                            })
+                        
+                        # Check if we have any template content
+                        has_template_content = enhanced_template_data.get('template_content') and len(enhanced_template_data['template_content']) > 0
+                        
+                        if has_template_content:
+                            st.success(f"✅ Using {len(enhanced_template_data['template_content'])} template/data sources")
+                        else:
+                            st.warning("⚠️ No template files uploaded. Using default template structure.")
+                        
+                        content = generate_template_content(document_type, selected_project, custom_requirements.split('\n') if custom_requirements else [], enhanced_template_data)
+                        
+                        # Add enhancement indicators
+                        if project_files_context and template_data_doc_gen:
+                            content += "\n\n---\n*📂 This document incorporates information from your project data files and uploaded templates.*"
+                        elif project_files_context:
+                            content += "\n\n---\n*📂 This document incorporates information from your project data files.*"
+                        elif template_data_doc_gen:
+                            content += "\n\n---\n*📋 This document was generated using your uploaded templates.*"
                     
                     # Save document to database
-                    document = {
-                        "project_id": selected_project["id"],
-                        "name": f"{document_type}_{selected_project['name']}",
-                        "type": document_type,
-                        "content": content,
-                        "status": "Draft"
-                    }
-                    
-                    document_id = st.session_state.db.save_document(document)
-                    document["id"] = document_id
-                    
-                    # Create workflow
-                    workflow = {
-                        "project_id": selected_project["id"],
-                        "document_id": document_id,
-                        "name": f"{document_type} Review",
-                        "status": "Active",
-                        "approvers": ["Project Manager", "Technical Lead", "Quality Assurance"],
-                        "current_step": 0
-                    }
-                    
-                    workflow_id = st.session_state.db.save_workflow(workflow)
-                    
-                    st.success("✅ Document generated successfully!")
-                    st.success("🔄 Approval workflow created!")
-                    
-                    # Display generated content preview
-                    st.subheader("📄 Document Preview")
-                    with st.expander("Show generated content", expanded=True):
-                        st.markdown(content)
+                    try:
+                        document = {
+                            "project_id": selected_project["id"],
+                            "name": f"{document_type}_{selected_project['name']}",
+                            "type": document_type,
+                            "content": content,
+                            "status": "Draft"
+                        }
+                        
+                        document_id = st.session_state.db.save_document(document)
+                        document["id"] = document_id
+                        
+                        # Create workflow
+                        workflow = {
+                            "project_id": selected_project["id"],
+                            "document_id": document_id,
+                            "name": f"{document_type} Review",
+                            "status": "Active",
+                            "approvers": ["Project Manager", "Technical Lead", "Quality Assurance"],
+                            "current_step": 0
+                        }
+                        
+                        workflow_id = st.session_state.db.save_workflow(workflow)
+                        
+                        st.success("✅ Document generated successfully!")
+                        st.success("🔄 Approval workflow created!")
+                        st.info(f"📄 Document ID: {document_id} | 🔄 Workflow ID: {workflow_id}")
+                        st.info("👥 **Next Step:** Check the 'Workflow Management' tab to view and manage the approval process.")
+                        
+                        # Display generated content preview
+                        st.subheader("📄 Document Preview")
+                        with st.expander("View Generated Content", expanded=True):
+                            st.markdown(content)
+                        
+                        # Option to download the document
+                        st.download_button(
+                            label="📥 Download Document",
+                            data=content,
+                            file_name=f"{document_type}_{selected_project['name']}.md",
+                            mime="text/markdown"
+                        )
+                        
+                    except Exception as db_error:
+                        st.error(f"❌ Database Error: {str(db_error)}")
+                        st.error("Failed to save document to database. Please try again.")
 
 def generate_template_content(document_type: str, project: Dict, additional_reqs: List[str], template_data: Optional[Dict] = None) -> str:
     """Generate template-based content with optional template file content"""
+    
+    # Check if we have meaningful project data (not just defaults)
+    has_meaningful_project_data = (
+        (project.get('functional_reqs') and len(project.get('functional_reqs', [])) > 0) or
+        (project.get('non_functional_reqs') and len(project.get('non_functional_reqs', [])) > 0) or
+        (project.get('description') and project.get('description') != 'Not specified')
+    )
+    
+    # Check if we have RAG context from vector database
+    has_vector_data = False
+    if template_data and template_data.get('template_content'):
+        for file_info in template_data['template_content']:
+            if file_info.get('filename') == 'project_data_context.txt' and file_info.get('content'):
+                has_vector_data = True
+                break
+    
     content = f"""# {document_type}
 
 ## Project Overview
@@ -1215,15 +2345,17 @@ def generate_template_content(document_type: str, project: Dict, additional_reqs
 This document outlines the {document_type.lower()} for the {project.get('name', 'project')} project.
 """
 
-    # Add template file content if available
+    # Add template file content if available (excluding RAG context)
     if template_data and template_data.get('template_content'):
         content += "\n## Reference Information from Template Files\n"
         for file_info in template_data['template_content']:
             filename = file_info.get('filename', 'Unknown file')
             file_content = file_info.get('content', '')
             
-            # Only include meaningful content (not error messages)
-            if file_content and not file_content.startswith(('Excel file:', 'Word document:', 'PowerPoint presentation:', 'PDF document:')):
+            # Skip RAG context file and only include meaningful content (not error messages)
+            if (filename != 'project_data_context.txt' and 
+                file_content and 
+                not file_content.startswith(('Excel file:', 'Word document:', 'PowerPoint presentation:', 'PDF document:'))):
                 content += f"\n### Content from {filename}\n"
                 # Limit content length for readability
                 if len(file_content) > 2000:
@@ -1232,20 +2364,28 @@ This document outlines the {document_type.lower()} for the {project.get('name', 
                     content += file_content + "\n"
 
     content += "\n## Requirements\n\n### Functional Requirements\n"
-    if project.get('functional_reqs'):
-        for i, req in enumerate(project['functional_reqs'], 1):
-            content += f"{i}. {req}\n"
-    else:
-        content += "1. System shall meet specified performance criteria\n"
-        content += "2. Solution shall integrate with existing systems\n"
     
-    content += "\n### Non-Functional Requirements\n"
-    if project.get('non_functional_reqs'):
-        for i, req in enumerate(project['non_functional_reqs'], 1):
-            content += f"{i}. {req}\n"
+    # If no meaningful project data and no vector data, leave template sections empty
+    if not has_meaningful_project_data and not has_vector_data:
+        content += "[Please add your functional requirements here]\n\n"
+        content += "### Non-Functional Requirements\n"
+        content += "[Please add your non-functional requirements here]\n\n"
     else:
-        content += "1. System shall be available 99.9% of the time\n"
-        content += "2. Response time shall not exceed 2 seconds\n"
+        # Use project data or default examples
+        if project.get('functional_reqs'):
+            for i, req in enumerate(project['functional_reqs'], 1):
+                content += f"{i}. {req}\n"
+        else:
+            content += "1. System shall meet specified performance criteria\n"
+            content += "2. Solution shall integrate with existing systems\n"
+        
+        content += "\n### Non-Functional Requirements\n"
+        if project.get('non_functional_reqs'):
+            for i, req in enumerate(project['non_functional_reqs'], 1):
+                content += f"{i}. {req}\n"
+        else:
+            content += "1. System shall be available 99.9% of the time\n"
+            content += "2. Response time shall not exceed 2 seconds\n"
     
     if additional_reqs:
         content += "\n### Additional Requirements\n"
@@ -1253,7 +2393,9 @@ This document outlines the {document_type.lower()} for the {project.get('name', 
             if req.strip():
                 content += f"{i}. {req.strip()}\n"
     
-    content += f"""
+    # Add implementation plan - keep flexible based on available data
+    if has_meaningful_project_data or has_vector_data:
+        content += f"""
 ## Implementation Plan
 - **Phase 1:** Planning and Design
 - **Phase 2:** Development and Testing
@@ -1270,7 +2412,26 @@ Quality gates and testing procedures will ensure deliverable meets Bosch standar
 
 ## Approval
 This document requires review and approval from designated stakeholders.
+"""
+    else:
+        content += f"""
+## Implementation Plan
+[Please outline your implementation phases and approach here]
 
+## Risk Management
+[Please identify key risks and mitigation strategies here]
+
+## Timeline
+[Please define project timeline and key milestones here]
+
+## Quality Assurance
+[Please specify quality gates and testing procedures here]
+
+## Approval
+[Please define approval workflow and stakeholders here]
+"""
+    
+    content += f"""
 ---
 *Generated by Bosch AI Document Manager - {datetime.now().strftime("%Y-%m-%d %H:%M")}*
 """
@@ -1282,6 +2443,19 @@ def show_workflow_management():
     
     workflows = st.session_state.db.get_workflows()
     documents = st.session_state.db.get_documents()
+    
+    # Debug information for troubleshooting
+    with st.expander("🔍 Debug Information", expanded=False):
+        st.write(f"**Total Workflows:** {len(workflows)}")
+        st.write(f"**Total Documents:** {len(documents)}")
+        if workflows:
+            st.write("**Workflow Details:**")
+            for w in workflows:
+                st.write(f"- ID: {w.get('id')}, Status: {w.get('status')}, Document ID: {w.get('document_id')}")
+        if documents:
+            st.write("**Document Details:**")
+            for d in documents:
+                st.write(f"- ID: {d.get('id')}, Name: {d.get('name')}, Type: {d.get('type')}, Status: {d.get('status')}")
     
     tab1, tab2 = st.tabs(["📋 Pending Tasks", "📊 Workflow Status"])
     
@@ -1309,48 +2483,50 @@ def show_workflow_management():
                             st.write(f"**Workflow:** {workflow['name']}")
                             st.write(f"**Status:** {workflow['status']}")
                         
-                        with st.form(f"task_{workflow['id']}"):
-                            col1, col2 = st.columns([1, 2])
-                            
-                            with col1:
-                                action = st.selectbox("Action", ["Approve", "Reject"], key=f"action_{workflow['id']}")
-                            
-                            with col2:
-                                comments = st.text_area(
-                                    "Comments", 
-                                    key=f"comments_{workflow['id']}",
-                                    placeholder="Add your comments about this decision..."
-                                )
-                            
-                            if st.form_submit_button("Submit Decision"):
-                                current_approver = workflow["approvers"][workflow["current_step"]]
+                        # Only PM can approve/reject documents
+                        if check_access('PM'):
+                            with st.form(f"task_{workflow['id']}"):
+                                col1, col2 = st.columns([1, 2])
                                 
-                                # Add comment to workflow history
-                                st.session_state.db.add_workflow_comment(
-                                    workflow['id'], 
-                                    current_approver, 
-                                    action, 
-                                    comments
-                                )
+                                with col1:
+                                    action = st.selectbox("Action", ["Approve", "Reject"], key=f"action_{workflow['id']}")
                                 
-                                if action == "Approve":
-                                    new_step = workflow["current_step"] + 1
-                                    if new_step >= len(workflow["approvers"]):
-                                        # Workflow complete
-                                        st.session_state.db.update_workflow(
-                                            workflow['id'], 
-                                            {'status': 'Completed', 'current_step': new_step}
-                                        )
-                                        st.session_state.db.update_document(
-                                            document['id'], 
-                                            {'status': 'Approved'}
-                                        )
-                                        st.success("✅ Document fully approved!")
-                                    else:
-                                        # Move to next step
-                                        st.session_state.db.update_workflow(
-                                            workflow['id'], 
-                                            {'current_step': new_step}
+                                with col2:
+                                    comments = st.text_area(
+                                        "Comments", 
+                                        key=f"comments_{workflow['id']}",
+                                        placeholder="Add your comments about this decision..."
+                                    )
+                                
+                                if st.form_submit_button("Submit Decision"):
+                                    current_approver = workflow["approvers"][workflow["current_step"]]
+                                    
+                                    # Add comment to workflow history
+                                    st.session_state.db.add_workflow_comment(
+                                        workflow['id'], 
+                                        current_approver, 
+                                        action, 
+                                        comments
+                                    )
+                                    
+                                    if action == "Approve":
+                                        new_step = workflow["current_step"] + 1
+                                        if new_step >= len(workflow["approvers"]):
+                                            # Workflow complete
+                                            st.session_state.db.update_workflow(
+                                                workflow['id'], 
+                                                {'status': 'Completed', 'current_step': new_step}
+                                            )
+                                            st.session_state.db.update_document(
+                                                document['id'], 
+                                                {'status': 'Approved'}
+                                            )
+                                            st.success("✅ Document fully approved!")
+                                        else:
+                                            # Move to next step
+                                            st.session_state.db.update_workflow(
+                                                workflow['id'], 
+                                                {'current_step': new_step}
                                         )
                                         next_approver = workflow['approvers'][new_step]
                                         st.success(f"✅ Approved! Moving to next approver: {next_approver}")
@@ -1367,6 +2543,10 @@ def show_workflow_management():
                                     st.error("❌ Document rejected!")
                                 
                                 st.rerun()
+                        else:
+                            # Project team members cannot approve
+                            st.warning("⚠️ Only Project Managers can approve or reject documents.")
+                            st.info("You can view workflow status in the overview tab below.")
         else:
             st.info("No pending approval tasks found.")
     
@@ -1605,9 +2785,30 @@ def show_ai_assistant():
                     "content": user_input
                 })
                 
-                # Generate AI response
+                # Generate AI response with RAG enhancement
                 with st.spinner("AI is thinking..."):
-                    messages = [{"role": "user", "content": user_input}]
+                    # Get RAG context if project is selected and RAG is available
+                    rag_context = ""
+                    if (current_project and st.session_state.rag_service.is_available() and 
+                        st.session_state.llm_settings['use_project_context']):
+                        
+                        rag_context = st.session_state.rag_service.get_context_for_query(
+                            project_id=current_project['id'],
+                            query=user_input,
+                            max_context_length=2000
+                        )
+                    
+                    # Enhance user input with RAG context
+                    enhanced_input = user_input
+                    if rag_context:
+                        enhanced_input = f"""Based on the project data provided below, please answer this question: {user_input}
+
+Relevant project information:
+{rag_context}
+
+Please provide a comprehensive answer using both your general knowledge and the specific project information above."""
+                    
+                    messages = [{"role": "user", "content": enhanced_input}]
                     
                     result = llm_service.generate_response(
                         messages=messages,
@@ -1617,11 +2818,17 @@ def show_ai_assistant():
                         project_context=current_project
                     )
                     
+                    # Add RAG indicator to response
+                    response_content = result['response']
+                    if rag_context:
+                        response_content += "\n\n*🧠 This response was enhanced with your project data using RAG.*"
+                    
                     st.session_state.chat_history.append({
                         "role": "assistant", 
-                        "content": result['response'],
+                        "content": response_content,
                         "is_fallback": result.get('is_fallback', False),
-                        "from_api": result.get('success', False)
+                        "from_api": result.get('success', False),
+                        "used_rag": bool(rag_context)
                     })
                 
                 st.rerun()

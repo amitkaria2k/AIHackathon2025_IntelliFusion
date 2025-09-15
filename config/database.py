@@ -48,6 +48,39 @@ class DatabaseManager:
             )
         ''')
         
+        # Project data files table for RAG
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS project_data_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                filename TEXT NOT NULL,
+                file_path TEXT,
+                file_type TEXT,
+                file_size INTEGER,
+                content TEXT,
+                content_hash TEXT,
+                is_template BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects (id)
+            )
+        ''')
+        
+        # Vector embeddings table for RAG
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS vector_embeddings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER,
+                file_id INTEGER,
+                chunk_index INTEGER,
+                chunk_text TEXT,
+                embedding_vector TEXT,
+                metadata TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects (id),
+                FOREIGN KEY (file_id) REFERENCES project_data_files (id)
+            )
+        ''')
+        
         # Workflows table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS workflows (
@@ -316,6 +349,10 @@ class DatabaseManager:
         # Delete related documents
         cursor.execute('DELETE FROM documents WHERE project_id = ?', (project_id,))
         
+        # Delete project data files and embeddings
+        cursor.execute('DELETE FROM vector_embeddings WHERE project_id = ?', (project_id,))
+        cursor.execute('DELETE FROM project_data_files WHERE project_id = ?', (project_id,))
+        
         # Delete project
         cursor.execute('DELETE FROM projects WHERE id = ?', (project_id,))
         
@@ -326,6 +363,106 @@ class DatabaseManager:
         """Delete multiple projects and all related data"""
         for project_id in project_ids:
             self.delete_project(project_id)
+    
+    # Project Data Files Management
+    def save_project_data_file(self, project_id: int, filename: str, file_path: str, file_type: str, 
+                               file_size: int, content: str, content_hash: str, is_template: bool = False) -> int:
+        """Save project data file information"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO project_data_files 
+            (project_id, filename, file_path, file_type, file_size, content, content_hash, is_template)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (project_id, filename, file_path, file_type, file_size, content, content_hash, is_template))
+        
+        file_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return file_id
+    
+    def get_project_data_files(self, project_id: int, include_templates: bool = True) -> List[Dict]:
+        """Get all data files for a project"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        if include_templates:
+            cursor.execute('''
+                SELECT * FROM project_data_files WHERE project_id = ?
+                ORDER BY created_at DESC
+            ''', (project_id,))
+        else:
+            cursor.execute('''
+                SELECT * FROM project_data_files WHERE project_id = ? AND is_template = FALSE
+                ORDER BY created_at DESC
+            ''', (project_id,))
+        
+        columns = [col[0] for col in cursor.description]
+        files = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        conn.close()
+        return files
+    
+    def delete_project_data_file(self, file_id: int):
+        """Delete a project data file and its embeddings"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Delete associated embeddings
+        cursor.execute('DELETE FROM vector_embeddings WHERE file_id = ?', (file_id,))
+        
+        # Delete file record
+        cursor.execute('DELETE FROM project_data_files WHERE id = ?', (file_id,))
+        
+        conn.commit()
+        conn.close()
+    
+    # Vector Embeddings Management
+    def save_vector_embedding(self, project_id: int, file_id: int, chunk_index: int, 
+                              chunk_text: str, embedding_vector: List[float], metadata: Dict = None):
+        """Save vector embedding for text chunk"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # Convert embedding to JSON string
+        embedding_json = json.dumps(embedding_vector)
+        metadata_json = json.dumps(metadata or {})
+        
+        cursor.execute('''
+            INSERT INTO vector_embeddings 
+            (project_id, file_id, chunk_index, chunk_text, embedding_vector, metadata)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (project_id, file_id, chunk_index, chunk_text, embedding_json, metadata_json))
+        
+        conn.commit()
+        conn.close()
+    
+    def get_vector_embeddings(self, project_id: int) -> List[Dict]:
+        """Get all vector embeddings for a project"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT ve.*, pdf.filename 
+            FROM vector_embeddings ve
+            JOIN project_data_files pdf ON ve.file_id = pdf.id
+            WHERE ve.project_id = ?
+            ORDER BY ve.file_id, ve.chunk_index
+        ''', (project_id,))
+        
+        columns = [col[0] for col in cursor.description]
+        embeddings = []
+        
+        for row in cursor.fetchall():
+            embedding_dict = dict(zip(columns, row))
+            # Parse JSON fields
+            embedding_dict['embedding_vector'] = json.loads(embedding_dict['embedding_vector'])
+            embedding_dict['metadata'] = json.loads(embedding_dict['metadata'])
+            embeddings.append(embedding_dict)
+        
+        conn.close()
+        return embeddings
     
     def add_workflow_comment(self, workflow_id: int, approver: str, action: str, comment: str = ""):
         """Add comment to workflow"""

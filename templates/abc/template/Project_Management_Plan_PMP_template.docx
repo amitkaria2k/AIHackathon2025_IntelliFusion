@@ -1,0 +1,980 @@
+
+
+Electrical Power Steering
+EPSapa
+
+
+
+
+
+
+TCD 
+Status 12.05.2018
+Purpose: Quotation 
+
+
+
+
+			
+
+
+
+
+
+Table of contents
+1	Product identification	4
+1.1	Further applicable documents	5
+2	General product description of Servolectric® EPSapa	8
+2.1	Main function and properties of the product	8
+2.2	Intended use	11
+2.3	Safety and warning notes	11
+2.4	Labeling of the product	12
+2.5	Dimensions and weights	12
+2.6	Power consumption / output	14
+2.6.1	System sizing assumption	14
+2.6.2	Conventional G1 Front Steer, LUX3 SUV Light, i = 66	15
+2.6.3	Conventional G4 Front Steer, LUX3 CUV Light, i = 71	16
+2.6.4	Conventional G5 & G6 Front Steer, LUX3 CUV, i = 71.0	17
+2.6.5	Conventional G9 & G36 Front Steer, LUX4 SUV, i = 65.0	18
+2.7	General remarks on service, repair and maintenance	19
+2.8	Information on disposal and recycling	19
+3	System description	20
+3.1	System	20
+3.1.1	Electrical System	21
+3.1.2	Sensor Unit	25
+3.1.3	Software-Functions	26
+3.1.4	Product security	33
+3.1.5	Systematic Collection of Field Data	33
+3.2	Electrical and mechanical interfaces	33
+3.2.1	ECU interface	34
+3.2.2	Software interface	38
+3.2.3	Interface mechanical Steering Gear	39
+3.2.4	Interface Sensor Unit	41
+3.2.5	Interface steering gear output	42
+4	Technical data with measured variables and measuring conditions	43
+4.1	Mechanical characteristics (to be determined/confirmed in ADVPR)	43
+4.2	Electrical characteristics	44
+4.2.1	Power- supply	44
+4.2.2	CAN	45
+4.2.3	ESD robustness	46
+4.2.4	Short-circuit strength	46
+4.3	Sensor Unit characteristics	47
+4.3.1	Steering range	47
+4.3.2	Connector interface	47
+4.3.3	Parameter torque sensor	47
+4.3.4	Linearity deviation	48
+4.3.5	Symmetry	48
+4.3.6	Hysteresis	49
+4.3.7	Transmission protocol	49
+4.3.8	Immunity against magnetic fields	49
+4.4	Climate characteristics	50
+4.4.1	Temperature profile steering system	50
+4.4.2	Sealing	50
+4.5	Chemical characteristics	51
+4.6	Acoustical characteristics	51
+4.7	Lifetime	52
+4.8	Shipment, assembly, start of operation and end of operation, storage, service, maintenance, recycling	52
+4.8.1	Activation/ deactivation	52
+4.8.2	Service/ maintenance	52
+4.8.3	Transport of the steering system	52
+4.8.4	Delivery condition of the steering system	52
+4.8.5	Storage time Steering System past manufacturing	53
+5	Testing	54
+5.1	Standard tests of EPSapa at Bosch	54
+5.1.1	Function tests	54
+5.1.2	Misuse tests	59
+5.1.3	Lifetime durability tests	60
+5.2	Customer specific tests	61
+5.2.1	Customer specific test plan	61
+5.3	Vehicle testing	62
+5.3.1	Bosch-specific Safety and Design Testing	63
+6	Assessment of products returned from the field	63
+7	Abbreviations	64
+8	Illustration directory	65
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Technical Customer Documentation 
+
+This TCD documents the present status of the agreed specification. 
+It will be confirmed when all validation has been completed with positive results.
+
+Product identification
+
+
+
+
+Further applicable documents
+
+
+
+Following sub-documents can be revised without losing the validity of the signed TCD.
+*Detailed information is in the sub-documents.
+
+
+Signatures
+
+General product description of Servolectric® EPSapa
+Main function and properties of the product
+EPSapa stands for Electric Power Steering – axis parallel type. As the name implies, the electric motor is mounted axially parallel to the steering rack. 
+The steering torque applied by the car driver at the steering wheel is transmitted to the input shaft connection by the steering column and the intermediate shaft. Additional comfort- assistance- and safety functions support the driver to control the vehicle.
+The signal of the incoming steering torque, measured by the torque sensor, is transmitted to the electronic control unit (ECU) and initiates there an assistance torque by the electric motor. 
+To transform the rotational torque of the motor to a linear movement of the steering rack,
+the Servolectric® with paraxial drive variant uses a drive concept consisting of toothed-belt drive and recirculating ball gear. The recirculating ball gear is a system in which the ball chain is returned through a channel integrated in the ball recirculating nut (see Figure 1: Product description EPSapa).
+
+
+Figure 1: Product description EPSapa
+
+
+
+
+
+
+
+
+Bosch points out that the ASIL-classified requirements (in the sense of ISO 26262), their implementation and the assumptions made for this purpose are documented in the following documents:
+
+Safety Case
+Safety Manual
+ 
+It is the customer’s responsibility to validate these requirements, their implementation and the assumptions made for this purpose. 
+The customer must ensure that the Bosch scope of delivery complies with the requirements for functional safety within the overall system.
+
+Table 1: Design Concept
+
+
+
+Figure 2: Design concept
+
+Table 2: Basic information
+Intended use 
+This steering system is intended only for application in a vehicle as defined in chapter 1.
+
+Bosch complied with the following regulations when developing the product: 
+
+UN/ECE Regulation R79-01 Revision 2 / 20th of January 2006 – Steering Equipment
+EU Commission Directive EEC 70/311-1999/7 – Steering equipment
+ISO 26262:2011 – Functional safety
+EU Directive 2000/53/EC – End of Life Vehicles (ELV)
+2011/65/EU – Restriction of Hazardous Substances (RoHS)
+EU Directive 2012/19/EU – Waste Electrical and - Electronic Equipment (WEEE)
+EU Directive 2009/125/EC – ECO-Design of Energy related Products (ErP)
+EU Regulation 1907/2006 – Registration, Evaluation, Authorization and Restriction of Chemicals (REACH)
+IATF 16949 2016 – Quality management system
+ISO/IEC 15504 Version 2.5 – Software Process Improvement and Capability Determination (SPICE)
+
+If additional country specific regulations have to be considered for product development, BOSCH AS assumes that the customer has determined those regulations and derived the requirements in the customer initial product requirement specification (Kunden-Lastenheft). 
+
+Provided that EPS steering system is used within the conditions (environment, application, installation, loads) as described in this TCD and the corresponding agreed upon documents, Bosch ensures that the product complies with the agreed properties. Agreements beyond this require the written approval by Bosch. The product is considered fit for the intended use when the product successfully has passed the tests in accordance with the TCD and agreed upon documents.
+
+It is the responsibility of the customer to ensure the proper application of the product in the vehicle.
+
+Bosch does not assume any responsibility for changes to the environment of the product that deviate from the TCD and the agreed upon documents as well as all applications not released by Bosch.
+
+Operation at conditions outside of the characteristic data given in the TCD is not permitted. Consequences have to be checked and approved by Bosch.
+
+Safety and warning notes
+See customer specific “General Notes for Removal and Installation” see document no.: TBD
+See “Handling of Components with A Characteristics and Notes for the Installation of Tie Rods in case of service”, document no.:004000253488
+See Service Manual “Servolectric EPSapa”, document no.:004000230971
+See customer- specific “Guidelines for the replacement of steering gears following an accident”, document no.: TBD
+Driver information about steering gear status: In the event of a disturbed steering function, it is recommended that the driver will be informed in clear text about the failure consequences. This information should be displayed in the dash panel, in addition to the standard failure lamp signal.
+A steering system that has seen an impact during handling e.g. fallen down during transport or during mounting in the customer production plant, has to be scrapped and must not be used any longer. 
+
+
+Labeling of the product
+The specific labeling of the steering system is given in the offer drawing (see 1.1) and in individual cases depending on the customer requirements. The label is designed as permanent adhesive DMC label.
+
+
+Figure 3: Product label
+
+
+
+
+Dimensions and weights
+
+Figure 4: Dimensions EPSapa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Table 3: Geometric data Steering System
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Power consumption / output 
+The result overview shows the wave 1 & 2.
+RHD Steering gears performance are comparable with LHD steering gears and were not considered separately.
+The curve shows servo assist without hand wheel torque. Requirements are shown relative to that curve.
+System sizing assumption
+
+
+
+
+
+Figure 5: System sizing assumption
+
+Conventional G1 Front Steer, LUX3 SUV Light, i = 66
+
+
+
+
+
+
+
+Figure 6: Power consumption / output -  12.6 kN rack force / i =66
+
+Conventional G4 Front Steer, LUX3 CUV Light, i = 71
+
+
+
+
+
+
+
+
+Figure 7: Power consumption / output -  12.6 kN rack force / i = 71
+
+Conventional G5 & G6 Front Steer, LUX3 CUV, i = 71.0
+
+
+
+
+
+
+
+
+Figure 8: Power consumption / output -  14.0 kN rack force / i =71
+
+
+Conventional G9 & G36 Front Steer, LUX4 SUV, i = 65.0
+
+
+
+
+
+
+
+
+Figure 9: Power consumption / output -  15.3 kN rack force / i = 65
+
+
+
+General remarks on service, repair and maintenance 
+Documents on service, repair and maintenance can be found in the Bosch AS service portal: https://steering-service.com/
+
+The following documents apply for the steering system described in this TCD:
+Customer specific “General Notes for Removal and Installation” see document no.: TBD 
+Service Manual “Servolectric EPSapa” see document no.:004000230971
+Customer-specific “Guidelines for the replacement of steering gears following an accident” see document.: TBD
+Handling of Components with A Characteristics and Notes for the Installation of Tie Rods in Case of Service see document no.: 004000253488
+
+Bosch Automotive Steering units may only be repaired in workshops with 
+- staff trained by Robert Bosch Automotive Steering GmbH 
+- specified equipment and special tools corresponding to the work to be performed 
+- original Bosch spare parts 
+
+Authorized, specialized staff must make sure that the product works perfectly again after the service work has been completed. 
+
+Information on disposal and recycling
+Bosch AS considers the provision of data regarding recycling and dismantling to be useful only in those cases where the supplied product will be, in fact, dismantled and subsequently recycled at the vehicle end of life.
+Bosch AS therefore suggests that such cases shall be identified and agreed upon between Bosch AS and GM on a case-by case-basis. The basis of this agreement is the declaration in the IMDS-datasheet.
+
+All metal parts which can no longer be used must be recycled in metal recycling. Other parts (e.g. seals) must be disposed of properly according to the respective applicable regulations.
+System description
+System
+
+Figure 12: Functional block diagram EPS
+
+
+
+General Bosch AS standards
+Evaluation of specifications: Product features and requirements included in referred specifications of the customer but not stated explicitly in this TCD and BOSCH AS compliance matrix are not included in the offer but have to be agreed upon with the customer in SE-meetings after receipt of the nomination (technology, costs and timing).
+The customer is responsible for the binding determination of all loads generated by use and misuse and communication of the loads to BOSCH AS.
+The customer is responsible for the release and validation of the interfaces and definition of the requirements for the release tests relevant for the vehicle.
+Excitation from vehicle level to the steering gear/system: The customer is responsible to advise BOSCH AS of the amplitudes and spectrum of frequencies which the steering gear/system experiences from the vehicle. Also the natural frequencies of the front axle and the amplitudes of the resultant tie rod loads due to cyclic loading. The customer is also responsible for steering systems and vehicle level generated disturbances, which adversely affect the noise, feel or function of the steering gear.
+The customer is responsible to inform BOSCH AS about the installation situation of the steering system in the vehicle.
+The customer is responsible that the installation and operation of the steering gear in the vehicle may not cause damage to the steering gear or to the vehicle due to insufficient available space.
+Electrical System
+E/E Block Diagram LOA3 
+
+
+
+Figure 13: E/E Block diagram
+
+
+E/E Block Diagram LOA4
+
+
+
+
+Sensor Unit
+General function description
+The Small Clockspring Sensor (SCS) unit in the Servolectric® steering system provides two functionalities, a single or a dual channel steering torque measurement and an optional index functionality. Based on this data, the electronic control unit (ECU) calculates the steering assistance. The figure below shows exemplary the structure of a Sensor Unit. 
+
+
+Figure 14: SCS Sensor Unit 
+
+The SCS sensor module is fixed on the steering pinion and the segment magnet is fixed on the input shaft. The steering pinion and input shaft are connected via a torsion bar. The torque sensor’s measuring range is limited, a mechanical angle limiter prevents the torsion bar from being overloaded when higher steering torques are applied.
+
+
+Block diagram
+
+Figure 15: SCS Block diagram, 2-channel torque with Absolute Angle
+
+
+Functional description torque
+If the driver applies torque on the steering wheel, the torsion bar of the sensor unit gets twisted and in effect the segment magnet gets twisted relatively to the sensor module. The sensor principle is based on the magneto resistive (MR) effect, where MR elements are connected in Wheatstone bridge circuits. The bridge circuit outputs, an electrical sine and cosine signal, representing the electrical angle in dependence to the magnet position as a consequence of applied torque on the steering wheel. The MR signals are processed by an ASIC inside the sensor module and digitally transmitted via PAS protocol from inner shaft to the fix housing via the clockspring cable. A specific calibration of the sensor is stored in the sensor ASIC itself. In the ECU/SCU the sensor raw values are evaluated and converted into steering torque values.
+
+
+Figure 16: Schematic block diagram of torque ASIC
+Software-Functions
+The EPS software is the embedded code that will be responsible for proper functioning of EPS. This software will reside in the ECU of the Steering Control Unit. The EPS software shall have following major functional characteristics:
+Provision of steering functionality
+Detection of hardware and signal errors
+Provision of suitable system reactions based on errors or overload
+Interaction with the vehicle network (data and signals)
+Interaction with diagnosis systems
+
+The software components (SW-C) shall be classified into:
+Basic steering functions (Control functions)
+The basic steering functions are responsible for the basic feel of the steering. Speed dependent support, active return, software end-stops, inertia compensation etc. are some of the software components under this category
+
+Protection functions
+Protection functions are responsible for protecting the EPS under harsh environmental conditions and to bring the system to safe state. Performance reduction in case of over-voltage and excess temperature are some of the software components under this category. LOA mitigation shall enhance driver control by creating a gradual transition between normal operation and the reduced assist available state. Limp Home, LimpAside, Fade Out and “Temporary (Recoverable) LOA State” are different modes to handle LOA
+
+Optional functions (Control Features)
+Optional functions are usually OEM requested EPS functions specific to the program and vehicle variants. Sheet “Table 3.1.2.2-1” from “Appendix_C2_Steering_Mechanical_SSTS_BEV3 Ver1.xlsm” of source package describes the base and optional functions required for BEV3 10 / 100 FIT EPS gear and are abstracted below:
+
+Introduction to Bosch CUBAS Software
+
+A common definition for hardware related software is Basic SW (BSW). It consists e.g. of software components for controller peripherals, ECU peripherals (ASICs), complex drivers, drivers for application interfaces, operating system and system control. BSW is the generic term for legacy software and also for AUTOSAR conforming BSW.
+The AUTOSAR conforming BSW are the software components below the RTE layer including complex drivers. There are the following software layers:
+MicroController Abstraction Layer (MCAL), µC dependent and hence controller/controller derivative specific
+ECU Abstraction Layer, ECU hardware dependent and hence product line specific
+Service Layer, mostly µC and ECU hardware independent
+CUBAS (Common UBK BAsic Software) is the complete AUTOSAR conforming BSW from Bosch that includes the software drivers for controller peripherals, which are not specified in AUTOSAR, but excluding complex drivers and software drivers for ECU peripherals (ASICs)
+
+Currently, CUBAS supports AUTOSAR standards 4.0, 4.1 and 4.2. For this program Bosch plans to use CUBAS BSW based on AUTOSAR 4.2 and is compatible with AUTOSAR 4.0.2 which is being requested by GM through AUTOSAR specification. Bosch plans to use ETAS SUM delivery for this project
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CUBAS Overview
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Following table summarizes the software requirements documents and their revision considered for development of BEV3 – LoA 3.5 and BEV3 – LoA4 software. For requirements that were either not submitted or were older than what is available in A2xx cadence the latest available revision is automatically carried over for BEV3 
+
+If there are any discrepancies in below tables, GM team should report them to Bosch immediately
+
+
+
+
+
+
+
+
+
+
+
+
+Build Variants
+
+BEV3 – 100FIT base software shall comply with loss of assist mitigation level 3.5 requirement specified in Steering Motor Assist STS. 
+BEV3 – 10FIT base software shall comply with loss of assist mitigation level 4 requirement specified in Steering Motor Assist STS
+Since BEV3 100 FIT and 10FIT are two separate ECU’s with different requirements, Bosch plans to keep two separate software development paths and deliveries.  Optional features shall be configured via respective system calibration file
+
+To ensure the functionality of the steering system described in this TCD, BOSCH AS reserves the right to use software support. The required software scope may exceed the scope mentioned above and is defined by BOSCH AS.
+
+The steering system properties guaranteed in this TCD can only be ensured if the permissible application range and tuning rules are adhered to. Tuning and function scopes for the customer are described in the application manual.
+Product security 
+Bosch wipes AS diagnostics from the EPS memory at Bosch EOL before shipping to GM production or service. Therefore, no seed&key is required for AS diagnostics. Re-installing AS diagnostics for post EOL use-cases currently not possible without downloading the SBAT (Signature Bypass Authorization Ticket).
+
+Although the customer uses 128-bit CMAC based seed&key mechanism, the requirement explicitly forbid Bosch AS protocols to reside in the EPS memory. In some cases however, and at the discretion of GM, uncritical GM may grant Bosch supplier access level for uncritical AS diagnostics.
+Systematic Collection of Field Data
+During operation in the field, the steering system records load and operation data according to the Agreement on the Systematic Collection of Field Data between BOSCH AS and customer.
+The data is used in an anonymized form to gather knowledge about typical load collectives and operation conditions in the field in order to design reliable steering systems.
+The collected data is liable to the non-disclosure agreement between BOSCH AS and the customer.
+Electrical and mechanical interfaces
+The customer is responsible to inform BOSCH AS about any design changes on the vehicle interface. All changes must be agreed on and commercially evaluated by BOSCH AS. 
+
+The customer is responsible for the design of the interface areas of the concerned components (e.g. connectors, mounting points): Fit (tolerances), materials, tightening torques, surfaces (coatings and roughness).
+
+
+Figure 17: Overview of the steering gear interfaces
+
+Figure 18: Visualization of the steering gear interfaces
+
+
+
+
+ECU interface
+Bosch is only responsible for the compliance of the product side plug (power and vehicle signal connector of ECU) with the agreed upon customer specification. Since the plug system is used per customer request, Bosch is not responsible and does not warrant for the connection assembly as a whole, especially not for its electrical function, durability and sealing.
+
+The customer is responsible that no other connector in the area of the Steering system can plugged in to the EPS. If there are identical connectors in this area, a mechanical coding of the connectors is recommended)
+
+The sensor interface is Bosch responsibility and must not be disconnected by the customer.
+
+
+Connector general information
+The device mounts are mechanically coded. The corresponding connector must have the corresponding code. Installation instructions:
+In order to guarantee the proper fit of the plug, the locking mechanism must be properly locked (and visible)
+The connectors must not be damaged and must be fully assembled 
+Unused terminals must be closed by suitable sealing plugs
+The harness must prevent the ingress of water. It is advisable to seal the wire (for example, shrink tube or adhesive sealant) 
+Moisture can enter the ECU through damaged pipes. It is recommended to additionally protect the cables mechanically (e.g. corrugate tube)
+In order to avoid damage to the plugs by improper pull-off, which may damage the control unit, the lock must be depressed while the plug is subsequently removed  
+The plugs must not be used as a support (for transport)
+The control unit has potted connectors.
+For the number of plug-in cycles, the specifications of the connector manufacturer or the interface responsible must be observed.
+
+
+
+Connector layout SCU3-C6A (LOA3) 
+
+Figure 19: LOA3 Connector layout (currently in development)
+
+
+
+
+
+
+
+Table 1: Connector Description LOA3 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Connector Layout SCU3-D6D (LOA4) 
+
+
+
+Figure 16: Connector Layout LOA4 (currently in development)
+
+
+
+Table 2: Connector Description LOA4
+
+
+
+Wiring Harness
+For the wiring of the Steering system in the vehicle, the cable routing and the design of the fuse is the responsibility of the customer (car manufacturer).
+It is recommended to use a fuse. 
+It is to be ensured by the vehicle manufacturer that there are no higher loads in the vehicle than are protected by the ECU design and testing. 
+
+
+Wiring design
+For the correct functionality of the Steering system and to avoid interferences with the vehicle power- supply following conditions have to observed:   
+
+The connected wiring must not be used as a support (for transport)
+The garages need to be informed that the consequences of broken wiring harness could be a dysfunction of the steering system because of water intrusion to the EPS. Damaged wiring harness must always be replaced, even with minor damage. 
+Wiring layout: parallel, closely to the vehicle body
+To avoid interferences the wiring harness of the power- supply should have as much as possible distance to the vehicle antennas.   
+The torque sensor use for torque measurement a magnetic field. To make sure a trouble-free operation of the sensor, stronger magnetic field (e.g. from magnetic valves,  wires with higher currents) has to be avoided in the area of the sensor
+The cables must be laid in a way that no mechanical loads (in particular vibration) can act on the connectors or the sealing geometries. For this purpose, the cable must be retained or attached to the vehicle body within 100mm of the respective connector.
+The minimum bending radius of the respective cable or conductor manufacturer must be observed  
+
+Reverse polarity protection
+The EPS has an active reverse polarity protection. A robustness against the reverse polarity is available. The reverse polarity test has to be performed related to the vehicle conditions. 
+Software interface
+The steering system provides a communication and diagnostic interface via the communication bus. The definition of the signals and data units is up to the customer and is documented in the communication matrix (see chapter 1.1 Further applicable documents).
+
+The available UDS services and data identifiers will be documented in the odx file according to ASAM MCD-2D standard (see chapter 1.1 Further applicable documents1.1 ).
+Interface mechanical Steering Gear
+
+
+
+Figure 20: Mechanical interfaces of the steering gear
+
+
+
+Figure 21: Mechanical interfaces of the steering gear (lateral view) 
+
+
+
+Figure 22: Mounting points of the vehicle
+
+
+
+
+Table 4: Mounting points vehicle interface
+
+
+Further interface specific BOSCH AS standards:
+The mounting layout must be confirmed through housing/belt cover FEM.
+Requirement for the front axle bracket of the customer: max. tolerance of ±0,2 mm is allowed from mounting 1 to all other mountings in screw direction (see Figure 22: Mounting points of the vehicle)
+Loads from vehicle suspension to steering gear mounts: BOSCH AS assumes that no loads will be applied from the vehicle via the mounts onto the steering gear. If the customer plans to input loads onto the steering gear mounts and therefore into the steering gear, these loads have to be requested by the customer and then quoted and calculated by BOSCH AS.
+Customer has to make sure that no drain and splash water channels transport water actively from the vehicle onto the steering system. The same applies to permanent dripping of water coming from the vehicle. Water coming from the vehicle may deposit corrosion products on the steering system and lead to corrosion of the same. 
+
+Interface Sensor Unit
+
+Further interface specific BOSCH AS standards:
+
+BOSCH assumes that after mounting the steering system in the vehicle and no steering wheel torque is applied, no side loads are induced to the steering shaft. Side loads may lead to an offset of the torque signal. If the customer expects side load onto the steering shaft, these loads have to be requested by the customer and then quoted and calculated by BOSCH AS.
+
+Interface steering gear output
+
+Figure 23: Triaxial view of the steering gear output
+
+#1 ML_SLA suspension
+
+
+
+
+
+
+Further interface specific BOSCH AS standards:
+The bellow is dimensionally stable up to max. 80°C. A straightness deviation of x=7mm to the center line of the bellow is required. The customer has to consider this required clearance in the vehicle package.
+Kinematics data: Jounce conditions generated by vehicle suspension geometry and front end compliance are to be within reasonable limits and advised to BOSCH AS by the customer.
+Additional unknown elasto-kinematics effects of the front axle must be submitted from the customer.
+Validation tie rod according to BOSCH AS specification 7832.050.176 F
+
+
+Table 5: Max. tie rod force for special events (SoE)
+
+Technical data with measured variables and measuring conditions
+The customer is responsible for the binding determination of all loads generated by use and misuse and communication of the loads to BOSCH AS.
+
+Unless explicitly stated otherwise, the technical data and tolerances mentioned in this TCD are valid in the new condition of the steering system.
+Mechanical characteristics (to be determined/confirmed in ADVPR)
+
+
+Electrical characteristics
+Power- supply
+All voltage values are related to the steering system power-supply connector.
+
+Figure 24: Voltage ranges for the steering system with its associated functional areas
+ 
+The illustration shows the voltage ranges for the steering system with the associated functional areas
+
+The vehicle power supply must be designed in such a way that the below mentioned voltages under the defined conditions are provided to the input terminals of the steering system.
+
+
+
+Figure 25: Power supply of the vehicle with interfaces (circuit)
+
+
+General note:
+After a passive storage period, higher currents can occur in the short term, which then drop to the typical values after a few hours (charging the electrolytic capacitors).
+
+Typical current consumption when steering is active but not in use: ≈ 300 mA 
+Maximum current consumption: ≤ tbd (depending on high rack load variant). Transient time peaks can be higher.
+CAN
+All voltage values are related to the steering system connector.
+
+                                                                          2X for LOA4 
+
+
+
+Figure 26: example CAN of the vehicle with interfaces (circuit)
+
+Electrical specification:
+ESD robustness
+The Steering ECU is an ESD sensitive device. High electrostatic fields, and especially their discharges, must be avoided because they can damage or even destroy the device.
+For the steering system no ESD higher than +/- 15 kV air discharge and +/-8 kV contact is allowed during transport, handling and assembly. Moreover the DIN EN 61340 has to be considered.
+Capable methods to prevent of static charging or discharging are necessary. Especially for the open (not connected) connector pins.
+ESD checks on vehicles are the responsibility of the customer.
+Short-circuit strength
+The following connector pins are protected in the normal supply voltage range against short circuits to the power supply voltage as well as to the ground voltage.
+
+For the CAN-bus:
+
+PAS_A, GND_A, PAS_B, GND_B and INDEX are as part of the steering internal SCS interface are not subjected to the short circuit test. The customer will be provided with documents showing the behavior of this interface in the event of short circuits to UBattery and ground. When the functional state E occurs, the exact failure is described.
+
+
+Sensor Unit characteristics 
+Steering range
+The sensor unit has a steering range of +/- 630°.
+Connector interface
+The connector of the sensor unit is Molex type 5601230800. The connector has  pins.
+
+Parameter torque sensor
+Torsion bar stiffness
+
+
+Linearity deviation
+For the EOL linearity deviation for the torque sensor on steering system level with 2,5Nm/° torsion bar stiffness the following limits are defined:
+
+Diff. torque: 	Mdiff  = Msense – Mref		≤ ± 0,25...± 0,5 Nm [0 Nm ≤ |Mref| ≤5 Nm], linear behavior
+ 				≤ ± 0,5 Nm [5 Nm ≤ |Mref| ≤10 Nm] 
+
+
+
+Figure 28: Example: Linearity deviation limits on steering system level
+
+Symmetry
+The symmetry of the torque sensor is defined as the delta of the absolute torque value steering left and right. For the symmetry of the torque sensor on steering system level with 2,5Nm/° torsion bar stiffness the following limits are defined:
+
+Symmetry: Msymm  = 0,5 * (|Msense (Mref -i)| – |Msense (Mref +i)|)	≤ ±0,25 Nm [0 Nm ≤ Mref  ≤4 Nm] 
+				   	≤ ±0,4 Nm [4 Nm ≤ Mref  ≤10 Nm] 
+
+Figure 29: Example: Symmetry deviation limits on steering system level
+
+Hysteresis
+The hysteresis is defined as the delta of a measured torque while increasing vs. releasing hand torque on the steering wheel for each steering direction.
+
+For the EOL hysteresis of the torque sensor on steering system level the following limits are defined:
+
+Hysteresis: 	Mhyst  = |Msense.incr – Msense.rel |	≤ ±0,4Nm [-10Nm≤Mref≤10Nm]
+
+
+
+Figure 30: Hysteresis deviation limits on steering system level
+Transmission protocol
+For the transmission of torque values the PAS* protocol is used. One package transmitted via PAS contains both 12 Bit sine and cosine values of one measurement and the status values. One package is put together from several short words.
+
+*peripheral acceleration sensor (two wire digital interface)
+Immunity against magnetic fields
+The torque sensor use for torque measurement a magnetic field. To make sure a trouble-free operation of the sensor, stronger magnetic field (e.g. from magnetic valves, wires with higher currents) has to be avoided in the area of the sensor.
+
+
+Climate characteristics
+Temperature profile steering system
+This steering system (except the below mentioned components) is designed to operate under the following ambient temperature profile:
+
+
+The customer has to ensure that the ambient temperature to which the steering system is exposed in the vehicle must not exceed the aforementioned temperature profile. 
+
+Exceptions
+
+Cooling ECU
+It is necessary to ensure the best possible cooling by convection from traveling winds or from the cooler fan. When the ECU is installed in close proximity to hot engine parts (e.g., exhaust system), measures should be taken to prevent heat from the ECU (eg, shielding with heat shields).
+
+Thermal protection ECU
+A reduction functionality over the temperature protects the ECU, under typical ambient conditions, against overloading and prevents damage to components. The temperature of one of the Powermodule (DBC) and of the circuit board (PCB) will be measured.
+The reduction strategy is implemented by the SW and is adapted to the system by application
+
+Air venting principle of ECU
+The ECU has per default a pressure compensation element (DAE = Druckausgleichselement), in order to compensate rapidly changing pressure conditions inside the steering system, which can be caused by strong temperature fluctuations. It is recommended to the customer, that the DAE is protected against pollution (e.g. by underbody protection), otherwise the function might be impaired.
+Sealing
+The steering system is protected against access of foreign objects and water in accordance to ISO 20653:2013 (E) code IPX9K.
+
+
+Chemical characteristics
+The steering system is protected against functional corrosion by salt according to specifications laid out in SSTS Appendix C2: 3.2.3.5.1.4 Crevice Corrosion Inspection Procedure and Grading, and in GMW15272.
+
+Surface corrosion outside of the sealing elements is considered as cosmetic corrosion. Cosmetic corrosion only affects the appearance of the components and does not degrade the performance of the steering system in any way. Cosmetic corrosion is no reason for complaint.
+
+In order to avoid premature corrosion, it is recommended to the customer to protect the steering system against stone chip and frictional contact to other vehicle components.
+
+Robustness against other chemicals is described in chapter environmental tests (see chapter Fehler! Verweisquelle konnte nicht gefunden werden. Fehler! Verweisquelle konnte nicht gefunden werden.).
+Acoustical characteristics
+During development BOSCH AS uses objective standard measurements for running, rattle and clunk noise. A two-tier testing strategy according to fiqure 13 is applied. Both standard tests and tests with realistic boundary conditions (forces, supply voltage, connection) are used. The test are described in detail in chapter 6.1.
+
+
+Figure 31: Acoustic test strategy
+
+
+For running (Steering Control Unit and belt) and transient noise characteristics reference master gears (limit samples) will be defined and agreed on by vehicle evaluation at the beginning of the development phase. These gears will be measured and documented on the BOSCH AS test benches. The noise characteristic will be used for reference in the development process.
+
+In series production Bosch AS uses a running noise test according chapter 6.1.1 for process monitoring.
+Limits for the relevant components (Steering Control Unit and belt) will be defined statistically with average value + 4 times standard deviation. The production will start with preliminary limits, which will be corrected after 1000 parts. The final limits will be defined after 10000 parts.
+
+Lifetime
+The steering system is designed to meet the following lifetime requirements (depending on the case that occurs first): 
+vehicle mileage			241,401 km or 
+vehicle lifetime			15 years or
+operating hours 			8,550 h or 
+ignition cycles			90,000 
+
+The defined values regarding vehicle lifetime and mileage requirements serve solely as a basis for the determination of the durability relevant driving maneuvers specified in chapter 5.1.3 Lifetime durability tests. They do not represent a guarantee towards the design / durability of this product. The commercial warranty and liability is independent of this information and is governed by the delivery conditions.
+Shipment, assembly, start of operation and end of operation, storage, service, maintenance, recycling
+Please pay special attention to the safety and warning notes in section 2.3.
+Activation/ deactivation
+See Service Manual “Servolectric EPSapa” document no.:004000230971
+See customer specific “General Notes for Removal and Installation” document no.: TBD
+Service/ maintenance
+See “Handling of Components with A Characteristics and Notes for the Installation of Tie Rods in case of service” document no.:004000253488
+See Service Manual “Servolectric EPSapa” document no.:004000230971
+See customer specific “General Notes for Removal and Installation” document no.: TBD
+Transport of the steering system
+The following parts are equipped with protection caps for transport and storage:
+Power-connector
+Signal-connector vehicle
+Outer ball joints
+Input shaft Sensor Unit
+
+During transport, the steering system must not be exposed to water and other corrosive media.
+The steering system must not be carried on the tie rods, but must be accommodated in the housing area without loading the bellows or plugs and cable. When handling e.g. during vehicle installation, the steering system must not bump anything (critical components are plastic parts - ECU housing, sensor cover, bellows, plugs and cable), because this can lead to leakage.
+Delivery condition of the steering system
+Due to production reasons, small amounts of lubricant and liquid seal residue can adhere to the outside of the product. This does not affect the product properties.
+
+The occurrence of cosmetic corrosion (see chapter 0 
+Chemical characteristics) at delivery of the steering system is no reason for complaint.
+Storage time Steering System past manufacturing
+Storage time passive: tstorage = 10 a 
+
+Storage conditions:
+ECU not powered with Ubat , Tamb = -40°C – 55 °C, 30-80% humidity
+ECU must not be exposed to UV-light-irradiation.
+During storage the steering system must not be exposed to dust, water and other corrosive media
+Cleaning processes before vehicle installation are not permitted (danger that lubrication at the radial shaft seal will be removed)
+
+Note:
+If the storage time is> 10 years, the ECU must be re-flashed.
+
+Testing
+The intended use defined in this TCD will be proved during development by the following tests.
+Standard tests of EPSapa at Bosch
+Function tests 
+Support Characteristic:
+Testing of the maximum servo assistance, symmetry and hysteresis according to the technical description.
+Measurement of the supporting characteristic with rack blocked against load sensor in central position.
+
+Torque to Rotate:
+Checking of the frictional behavior of the steering system.
+Measure the no load steering torque without support /POWER OFF
+
+
+
+Rack Sliding Force:
+Checking of the frictional behavior of the steering system.
+Measurement of the rack sliding force of the steering system without support / POWER OFF 
+
+Yoke Clearance:
+Measurement of the yoke clearance of the steering system. 
+
+Servo Drive Stiffness:
+Measurement of the servo drive stiffness.
+
+
+
+Standard acoustic test bench:
+Checking the running noise behavior of the steering system.
+
+
+
+Acoustic test on universal test bench:
+Checking the running noise behavior under realistic boundary conditions
+
+Rattle test bench:
+Checking the rattle noise behavior of the steering system.
+
+
+
+Clunk test bench:
+Checking the clunk noise behavior of the steering system.
+
+
+Misuse tests
+Static Torsion:
+The described test is a simple, effective and reproducible method to determine the mechanical property values of steering gears under quasi-static torsion stress via the input shaft.
+
+Mechanical Shock:
+The test is used for a preliminary dimensioning with regard to the misuse stress "passing obstacles".
+
+Strength of screw connection:
+The test is used for the verification of the screw connections on the steering.
+Lifetime durability tests
+12-Step durability test + Special events
+
+Customer specific tests
+Customer specific test plan
+ 
+Figure 32: Extract from a customer specific test plan
+
+
+Vehicle testing 
+The responsibilities between BOSCH AS and the customer regarding the conduction of the vehicle tests are defined in the “Responsibility matrix vehicle tests” see figure below.
+
+It is the customer’s responsibility to inform BOSCH AS about the test results of the agreed upon tests.
+
+From Appendix_C2_Steering_Mechanical_SSTS_template 2018 27 04.xlsm
+GM will conduct certain vehicle tests. The supplier should be aware of these tests, since the steering system will be expected to perform. The laboratory testing required in the CTS does comprehend most of what the steering system will experience on vehicle test. The following is a summary of the vehicle tests that will be conducted:
+
+Durability -- a number of vehicles will be tested on various vehicle level durability schedules. The intent of the schedules is to subject the vehicles to severe conditions to simulate high mileage customer usage in a limited amount of time. Included will be extreme hot weather, extreme cold weather, corrosives, rough roads, mud, dust, water intrusion, etc. Issues that are discovered on durability will be documented by a Problem Resolution Tracking System document (PRTS--explained in the Statement of Requirements).
+
+Thermal Validation -- Vehicles will be tested at the GM test facilities representing maximum and minimum thermal requirements. 
+
+Noise/Shudder -- The steering system shall be expected to be free of noise, including, but not limited to, gear noise, and motor noise. The supplier will be expected to supply necessary analysis support and components to eliminate any unusual noises. Vehicle steering noise validation shall demonstrate compliance to VTS requirements per GMW8467 and GMN5848 tests with maximum and minimum tuning calibration gain.
+
+Water Intrusion -- Various water leak tests will be conducted at the vehicle level. All steering components shall successfully pass with no water intrusion.
+
+
+Bosch-specific Safety and Design Testing
+
+Assessment of products returned from the field  
+Some product characteristics such as friction, play or the acoustic behavior of the steering system may change over lifetime due to wear. 
+
+Unless explicitly stated otherwise, the technical data and tolerances mentioned in this TCD are valid in the new condition of the steering system.
+
+Returned products are considered good if they fulfill the specifications/ test data for 0-km and field listed in the TCD.
+
+The degradation of parameters, which change over lifetime, cannot be assumed linear.
+
+
+Abbreviations
+
+
+Illustration directory
+Figure 1: Product description EPSapa	8
+Figure 2: Design concept	9
+Figure 3: Product label	12
+Figure 4: Dimensions EPSapa	12
+Figure 5: System sizing assumption	14
+Figure 6: Power consumption / output -  14.1 kN rack force / i =64	15
+Figure 7: Power consumption / output -  14.1 kN rack force / i = 60	16
+Figure 8: Power consumption / output -  14.1 kN rack force / i =70	17
+Figure 9: Power consumption / output -  16.2 kN rack force / i = 64	18
+Figure 10: Power consumption / output -  15.9 kN rack force / i = 59	19
+Figure 11: Power consumption / output -  19.1 kN rack force / i = 59	20
+Figure 12: Functional block diagram EPS	22
+Figure 13: E/E Block diagram	23
+Figure 14: SCS Sensor Unit	25
+Figure 15: SCS Block diagram, 2-channel torque with Absolute Angle	26
+Figure 16: Schematic block diagram of torque ASIC	26
+Figure 17: Overview of the steering gear interfaces	32
+Figure 18: Visualization of the steering gear interfaces	32
+Figure 19: LOA3 Connector layout (currently in development)	34
+Figure 20: Mechanical interfaces of the steering gear	37
+Figure 21: Mechanical interfaces of the steering gear (lateral view)	37
+Figure 22: Mounting points of the vehicle	38
+Figure 23: Triaxial view of the steering gear output	40
+Figure 24: Voltage ranges for the steering system with its associated functional areas	42
+Figure 25: Power supply of the vehicle with interfaces (circuit)	43
+Figure 26: example CAN of the vehicle with interfaces (circuit)	43
+Figure 23: Pin out torque and index sensor, 5-pin connector	45
+Figure 28: Example: Linearity deviation limits on steering system level	46
+Figure 29: Example: Symmetry deviation limits on steering system level	46
+Figure 30: Hysteresis deviation limits on steering system level	47
+Figure 31: Acoustic test strategy	49
+Figure 32: Extract from a customer specific test plan	59
+
