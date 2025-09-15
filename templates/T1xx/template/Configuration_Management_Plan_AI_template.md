@@ -9,7 +9,7 @@
 
 ## Document Information
 - **Document Type:** Configuration Management Plan
-- **Project Description:** GM heavy duty program
+- **Project Description:** Heavy duty program
 - **Generated:** AI Template for T1xx
 
 ---
@@ -98,19 +98,6 @@
 
 ---
 
-## FUNCTIONAL REQUIREMENTS
-
-- Requirement 1
-- Requirement 2
-
----
-
-## CONDITIONS AND CONSTRAINTS
-
-- Compliance with Bosch process
-
----
-
 
 ## TEMPLATE USAGE NOTES
 
@@ -123,5 +110,5 @@ This template was generated automatically based on your project information. Ple
 
 ---
 
-**Template Generated:** 2025-09-15 10:34
+**Template Generated:** 2025-09-15 11:36
 **For Project:** T1xx
