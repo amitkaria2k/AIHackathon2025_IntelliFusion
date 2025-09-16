@@ -1077,8 +1077,8 @@ def main():
                 "💬 AI Assistant",
                 "⚙️ Settings"
             ])
-            # Create placeholder tabs to maintain structure
-            tab2 = tab3 = tab10 = None
+            # PM has full access - no tabs set to None
+            tab10 = None  # Only tab10 is not used by PM
         elif user_role == 'Project team':
             # Project team has limited access (includes Settings now)
             tab1, tab4, tab5, tab6, tab7, tab8 = st.tabs([
