@@ -1105,11 +1105,16 @@ def main():
         
         # Tab content with role-based access control
         with tab1:
+            # Clear new project session state when navigating to other tabs
+            if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                clear_new_project_session_state()
+            st.session_state.current_tab = 'dashboard'
             show_dashboard()
         
         if tab2 is not None:  # PM only
             with tab2:
                 if check_access('PM'):
+                    st.session_state.current_tab = 'new_project'
                     show_new_project()
                 else:
                     show_access_denied("project creation")
@@ -1117,6 +1122,10 @@ def main():
         if tab3 is not None:  # PM only
             with tab3:
                 if check_access('PM'):
+                    # Clear new project session state when navigating to other tabs
+                    if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                        clear_new_project_session_state()
+                    st.session_state.current_tab = 'edit_projects'
                     show_edit_projects()
                 else:
                     show_access_denied("project editing")
@@ -1124,18 +1133,30 @@ def main():
         if tab4:  # Document Generation tab (not available for Quality team)
             with tab4:
                 if check_access(['generate_document']):
+                    # Clear new project session state when navigating to other tabs
+                    if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                        clear_new_project_session_state()
+                    st.session_state.current_tab = 'document_generation'
                     show_document_generation()
                 else:
                     show_access_denied("document generation")
         
         with tab5:
             if check_access(['view_workflow']):
+                # Clear new project session state when navigating to other tabs
+                if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                    clear_new_project_session_state()
+                st.session_state.current_tab = 'workflow'
                 show_workflow_management()
             else:
                 show_access_denied("workflow management")
         
         with tab6:
             if check_access(['project_overview']):
+                # Clear new project session state when navigating to other tabs
+                if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                    clear_new_project_session_state()
+                st.session_state.current_tab = 'project_overview'
                 show_project_overview()
             else:
                 show_access_denied("project overview")
@@ -1143,6 +1164,10 @@ def main():
         if tab7:  # AI Assistant tab (not available for Quality team)
             with tab7:
                 if check_access(['ai_assistant']):
+                    # Clear new project session state when navigating to other tabs
+                    if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                        clear_new_project_session_state()
+                    st.session_state.current_tab = 'ai_assistant'
                     show_ai_assistant()
                 else:
                     show_access_denied("AI assistant")
@@ -1150,6 +1175,10 @@ def main():
         if tab8 is not None:  # Settings tab
             with tab8:
                 if check_access('PM'):
+                    # Clear new project session state when navigating to other tabs
+                    if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                        clear_new_project_session_state()
+                    st.session_state.current_tab = 'settings'
                     show_settings()
                 else:
                     show_access_denied("system settings")
@@ -1157,6 +1186,10 @@ def main():
         # Compliance Audit tab (Quality team specific)
         if user_role == 'Quality team' and 'tab10' in locals() and tab10 is not None:
             with tab10:
+                # Clear new project session state when navigating to other tabs
+                if 'current_tab' in st.session_state and st.session_state.current_tab == 'new_project':
+                    clear_new_project_session_state()
+                st.session_state.current_tab = 'compliance_audit'
                 show_compliance_audit()
 
     except Exception as e:
@@ -1337,19 +1370,51 @@ def show_dashboard():
         else:
             st.warning("⚠️ AI Service (Demo Mode)")
 
+def clear_new_project_session_state():
+    """Clear all session state variables related to new project creation"""
+    # List of all session state keys to clear for new project
+    keys_to_clear = [
+        'new_project_doc_selections',
+        'doc_template_selections',
+        'project_template_upload',
+        'project_data_files',
+        'project_data_folder',
+        'uploaded_project_data',
+        'template_analysis_complete',
+        'ai_recommendations',
+        'project_form_submitted',
+        'project_creation_in_progress'
+    ]
+    
+    # Clear specific keys
+    for key in keys_to_clear:
+        if key in st.session_state:
+            del st.session_state[key]
+    
+    # Clear any file preview states and other dynamic keys
+    keys_to_remove = []
+    for key in st.session_state.keys():
+        if (isinstance(key, str) and 
+            (key.startswith('show_preview_') or 
+             key.startswith('new_project_') or 
+             key.startswith('doc_template_') or
+             key.startswith('project_template_') or
+             key.startswith('template_'))):
+            keys_to_remove.append(key)
+    
+    for key in keys_to_remove:
+        del st.session_state[key]
+
 def show_new_project():
     """Show new project creation form with template upload"""
+    
     st.title("🆕 Create New Project")
     
     # Add a reset button for form state
     col_reset, col_spacer = st.columns([1, 3])
     with col_reset:
         if st.button("🔄 Reset Form", help="Clear all selections and start fresh"):
-            # Clear session state for new project
-            if 'new_project_doc_selections' in st.session_state:
-                del st.session_state.new_project_doc_selections
-            if 'doc_template_selections' in st.session_state:
-                del st.session_state.doc_template_selections
+            clear_new_project_session_state()
             st.rerun()
     
     # Project template upload section
@@ -1732,11 +1797,8 @@ def show_new_project():
                 if files_processed == 0 and not failed_files:
                     st.info("📂 Project created without additional data files. You can add files later in the 'Edit Projects' tab.")
                 
-                # Clear template selections after successful creation
-                if 'doc_template_selections' in st.session_state:
-                    del st.session_state.doc_template_selections
-                if 'new_project_doc_selections' in st.session_state:
-                    del st.session_state.new_project_doc_selections
+                # Clear all new project session state after successful creation
+                clear_new_project_session_state()
                 
                 st.success("🎉 Project created successfully!")
                 
@@ -2435,22 +2497,40 @@ def show_document_generation():
                         st.info(f"📄 Document ID: {document_id} | 🔄 Workflow ID: {workflow_id}")
                         st.info("👥 **Next Step:** Check the 'Workflow Management' tab to view and manage the approval process.")
                         
+                        # Store generated document in session state for download
+                        st.session_state.generated_document = {
+                            'content': content,
+                            'filename': f"{document_type}_{selected_project['name']}.md",
+                            'document_type': document_type,
+                            'project_name': selected_project['name']
+                        }
+                        
                         # Display generated content preview
                         st.subheader("📄 Document Preview")
                         with st.expander("View Generated Content", expanded=True):
                             st.markdown(content)
                         
-                        # Option to download the document
-                        st.download_button(
-                            label="📥 Download Document",
-                            data=content,
-                            file_name=f"{document_type}_{selected_project['name']}.md",
-                            mime="text/markdown"
-                        )
-                        
                     except Exception as db_error:
                         st.error(f"❌ Database Error: {str(db_error)}")
                         st.error("Failed to save document to database. Please try again.")
+    
+    # Download button outside of form (if document was generated)
+    if 'generated_document' in st.session_state:
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            st.download_button(
+                label="📥 Download Document",
+                data=st.session_state.generated_document['content'],
+                file_name=st.session_state.generated_document['filename'],
+                mime="text/markdown",
+                use_container_width=True
+            )
+        
+        # Optional: Clear the session state after some time or when user navigates away
+        if st.button("🗑️ Clear Generated Document", use_container_width=True):
+            del st.session_state.generated_document
+            st.rerun()
 
 def generate_template_content(document_type: str, project: Dict, additional_reqs: List[str], template_data: Optional[Dict] = None) -> str:
     """Generate template-based content with optional template file content"""
@@ -3394,23 +3474,15 @@ def show_ai_assistant():
     st.title("💬 AI Assistant")
     
     # Add tabs for different AI features
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2 = st.tabs([
         "🤖 Chat Assistant", 
-        "📄 Document Analysis", 
-        "🔍 Smart Search", 
         "⚙️ Configuration"
     ])
     
     with tab1:
         show_chat_assistant()
-    
-    with tab2:
-        show_document_analysis()
-    
-    with tab3:
-        show_smart_search()
         
-    with tab4:
+    with tab2:
         show_ai_configuration()
 
 def show_chat_assistant():
@@ -3434,14 +3506,88 @@ def show_chat_assistant():
                 documents = st.session_state.db.get_documents()
                 if documents:
                     latest_doc = max(documents, key=lambda x: x['created_at'])
-                    summary_prompt = f"Summarize this document: {latest_doc['content'][:1000]}..."
-                    # Add to chat
+                    
+                    # Add user message to chat
                     if 'chat_history' not in st.session_state:
                         st.session_state.chat_history = []
+                    
+                    user_message = f"Summarize document: {latest_doc['name']}"
                     st.session_state.chat_history.append({
                         "role": "user", 
-                        "content": f"Summarize document: {latest_doc['name']}"
+                        "content": user_message
                     })
+                    
+                    # Generate LLM response with spinner
+                    with st.spinner("🧠 AI is analyzing the document..."):
+                        # Create comprehensive prompt for document summarization
+                        summary_prompt = f"""
+                        Please provide a comprehensive summary of the following document:
+                        
+                        Document Name: {latest_doc.get('name', 'Unknown')}
+                        Document Type: {latest_doc.get('type', 'Unknown')}
+                        Status: {latest_doc.get('status', 'Unknown')}
+                        
+                        Document Content (first 1000 characters):
+                        {latest_doc.get('content', 'No content available')[:1000]}...
+                        
+                        Please provide:
+                        1. A brief executive summary
+                        2. Key points and main sections
+                        3. Important action items or requirements mentioned
+                        4. Overall document status and recommendations
+                        """
+                        
+                        # Try to get AI response
+                        try:
+                            response = llm_service.generate_response([
+                                {"role": "user", "content": summary_prompt}
+                            ], 
+                            temperature=st.session_state.llm_settings.get('temperature', 0.7),
+                            max_tokens=st.session_state.llm_settings.get('max_tokens', 1000))
+                            
+                            if response.get('success', False):
+                                ai_response = response.get('response', 'No response received')
+                                st.session_state['api_calls'] = st.session_state.get('api_calls', 0) + 1
+                            else:
+                                # Fallback response if LLM fails
+                                ai_response = f"""📄 **Document Summary: {latest_doc.get('name', 'Unknown Document')}**
+
+**Document Details:**
+- Type: {latest_doc.get('type', 'Unknown')}
+- Status: {latest_doc.get('status', 'Unknown')}
+- Content Length: ~{len(latest_doc.get('content', ''))} characters
+
+**Key Information:**
+{latest_doc.get('content', 'No content available')[:300]}...
+
+**AI Analysis:** This document appears to contain important project information. For a more detailed analysis, please ensure the LLM service is properly configured in Settings.
+
+💡 **Recommendation:** Review the full document content and consider updating it if it's in draft status."""
+                            
+                            # Add AI response to chat history
+                            st.session_state.chat_history.append({
+                                "role": "assistant",
+                                "content": ai_response
+                            })
+                            
+                        except Exception as llm_error:
+                            # Error handling for LLM service
+                            error_response = f"""❌ **Unable to generate document summary**
+
+**Error:** {str(llm_error)}
+
+**Document Information Available:**
+- Name: {latest_doc.get('name', 'Unknown')}
+- Type: {latest_doc.get('type', 'Unknown')}
+- Status: {latest_doc.get('status', 'Unknown')}
+
+**Suggestion:** Please check the LLM service configuration in Settings tab or try again later."""
+                            
+                            st.session_state.chat_history.append({
+                                "role": "assistant",
+                                "content": error_response
+                            })
+                    
                     st.rerun()
                 else:
                     st.warning("No documents available to summarize")
@@ -3513,7 +3659,7 @@ def show_chat_assistant():
 **🚀 Recommendations:**
 1. **Documentation:** {"Maintain good documentation practices" if len(documents) >= len(projects) * 2 else "Increase documentation coverage"}
 2. **Workflow Optimization:** {"Review active workflows for bottlenecks" if len(workflows) > 5 else "Consider implementing more structured workflows"}
-3. **Quality Control:** Enable AI-powered document analysis for better quality
+3. **Quality Control:** Use standardized templates for consistent quality
 4. **Efficiency:** Use smart templates to reduce document creation time by 40%
 
 **📋 Next Steps:**
@@ -3548,7 +3694,7 @@ def show_chat_assistant():
 
 **Available Features for Analysis:**
 • Navigate to **Dashboard** for visual project metrics
-• Use **AI Assistant** tabs for detailed document analysis
+• Use **AI Assistant** for project guidance and support
 • Check **Workflow Management** for process insights
 • Access **Document Generation** for AI-powered creation
 
@@ -3714,21 +3860,21 @@ Would you like me to guide you to specific features for deeper project insights?
 **Tip:** Our AI can reduce document creation time by up to 40%!"""
 
                         elif any(word in user_lower for word in ['search', 'find', 'locate']):
-                            ai_response = """🔍 **Smart Search Capabilities:**
+                            ai_response = """🔍 **Search Capabilities:**
 
-**AI Search Features:**
-• Semantic understanding (not just keywords)
-• Context-aware results ranking
-• Related document suggestions
-• Filter by type, date, and relevance
+**Available Search Features:**
+• Project-based search within existing projects
+• Document filtering by type and date
+• Content preview and quick access
+• Role-based access control
 
 **How to Use:**
-1. Navigate to AI Assistant → Smart Search tab
-2. Enter natural language queries
-3. Review AI-ranked results
-4. Explore related suggestions
+1. Navigate to Project Overview tab
+2. Use the search and filter options
+3. Browse through project documents
+4. Access relevant files directly
 
-**Example Queries:** "Find risk assessments from last month" or "Documents about compliance requirements" """
+**Search Tips:** Use project names, document types, or content keywords for better results."""
 
                         else:
                             ai_response = f"""🤖 **AI Assistant Response to:** "{user_input}"
@@ -3738,14 +3884,14 @@ Would you like me to guide you to specific features for deeper project insights?
 📊 **Project Management:** Status updates, health monitoring, analytics
 📝 **Document Creation:** AI templates, generation, quality assessment  
 ⚡ **Workflow Optimization:** Bottleneck analysis, process improvements
-🔍 **Smart Search:** Semantic document discovery and recommendations
+� **Project Organization:** Document management and access control
 ✅ **Compliance:** Automated checking and validation
 
 **Available Features:**
 • Real-time project insights
 • Intelligent document templates
 • Workflow bottleneck detection
-• Smart search across all content
+• Project-based document organization
 
 **Try asking:** "What's my project status?" or "How can I optimize my workflows?" or "Help me create a technical document"
 
@@ -3788,193 +3934,6 @@ Would you like me to guide you to specific features for deeper project insights?
             
             st.rerun()
 
-def show_document_analysis():
-    """AI-powered document analysis feature"""
-    st.subheader("📄 AI Document Analysis")
-    
-    st.info("📖 Upload documents to get AI-powered insights including classification, quality assessment, compliance checks, and workflow recommendations.")
-    
-    # File upload
-    uploaded_file = st.file_uploader(
-        "Choose a document to analyze",
-        type=['pdf', 'docx', 'txt', 'md', 'json'],
-        help="Upload documents for comprehensive AI analysis"
-    )
-    
-    if uploaded_file:
-        with st.spinner("🔍 Analyzing document..."):
-            try:
-                # Extract text content
-                if st.session_state.get('rag_service'):
-                    content = st.session_state.rag_service.extract_text_from_file(uploaded_file, uploaded_file.name)
-                else:
-                    # Fallback text extraction
-                    content = uploaded_file.read().decode('utf-8', errors='ignore')
-                
-                # Get AI analysis
-                ai_service = get_ai_features_service(llm_service, st.session_state.get('rag_service'))
-                if ai_service:
-                    analysis = ai_service.analyze_document(content, uploaded_file.name)
-                    
-                    # Display results
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("### 📋 Document Classification")
-                        st.metric("Document Type", analysis.document_type)
-                        st.metric("Confidence", f"{analysis.confidence:.1%}")
-                        
-                        st.markdown("### 📊 Quality Assessment")
-                        quality_color = "🟢" if analysis.quality_score >= 0.8 else "🟡" if analysis.quality_score >= 0.6 else "🔴"
-                        st.metric("Quality Score", f"{quality_color} {analysis.quality_score:.1%}")
-                        
-                        st.markdown("### ⚠️ Risk Level")
-                        risk_color = "🔴" if analysis.risk_level == "High" else "🟡" if analysis.risk_level == "Medium" else "🟢"
-                        st.metric("Risk Assessment", f"{risk_color} {analysis.risk_level}")
-                    
-                    with col2:
-                        st.markdown("### 📝 Document Summary")
-                        st.write(analysis.summary)
-                        
-                        if analysis.key_entities:
-                            st.markdown("### 🔍 Key Information")
-                            for entity in analysis.key_entities[:5]:
-                                st.write(f"• **{entity['type'].title()}**: {entity['value']}")
-                    
-                    # Action Items
-                    if analysis.action_items:
-                        st.markdown("### ✅ Action Items Detected")
-                        for item in analysis.action_items:
-                            st.write(f"• {item}")
-                    
-                    # Compliance Issues
-                    if analysis.compliance_issues:
-                        st.markdown("### ⚖️ Compliance Review")
-                        for issue in analysis.compliance_issues:
-                            st.warning(f"⚠️ {issue}")
-                    
-                    # Workflow Recommendations
-                    st.markdown("### 🔄 Workflow Recommendations")
-                    workflow_rec = ai_service.recommend_workflow(analysis)
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write("**Recommended Approvers:**")
-                        for approver in workflow_rec.recommended_approvers:
-                            st.write(f"• {approver}")
-                        
-                        st.metric("Estimated Duration", f"{workflow_rec.estimated_duration} days")
-                    
-                    with col2:
-                        if workflow_rec.risk_factors:
-                            st.write("**Risk Factors:**")
-                            for risk in workflow_rec.risk_factors:
-                                st.write(f"⚠️ {risk}")
-                        
-                        if workflow_rec.optimization_suggestions:
-                            st.write("**Optimization Suggestions:**")
-                            for suggestion in workflow_rec.optimization_suggestions:
-                                st.write(f"💡 {suggestion}")
-                
-                else:
-                    st.error("AI analysis service not available. Please check configuration.")
-                    
-            except Exception as e:
-                st.error(f"Error analyzing document: {str(e)}")
-
-def show_smart_search():
-    """AI-powered semantic search feature"""
-    st.subheader("🔍 Smart Search")
-    
-    st.info("🎯 Search your documents using natural language. The AI understands context and meaning, not just keywords.")
-    
-    # Search input
-    search_query = st.text_input(
-        "What are you looking for?",
-        placeholder="e.g., 'Show me all risk assessments from last month' or 'Find documents about quality standards'"
-    )
-    
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        search_type = st.radio(
-            "Search Mode:",
-            ["Semantic Search (AI-powered)", "Keyword Search", "Hybrid Search"]
-        )
-    
-    with col2:
-        max_results = st.number_input("Max Results", min_value=1, max_value=20, value=5)
-    
-    if search_query and st.button("🔍 Search", type="primary"):
-        with st.spinner("🧠 AI is searching..."):
-            try:
-                # Get all documents
-                documents = st.session_state.db.get_documents()
-                
-                if not documents:
-                    st.warning("No documents available to search.")
-                    return
-                
-                if search_type == "Semantic Search (AI-powered)":
-                    # Use LLM for semantic search
-                    search_prompt = f"""
-                    Given this search query: "{search_query}"
-                    
-                    And these document titles and contents:
-                    {chr(10).join([f"- {doc['name']}: {doc['content'][:200]}..." for doc in documents[:10]])}
-                    
-                    Rank the documents by relevance to the query. Return the top {max_results} most relevant documents with brief explanations.
-                    Format: "Document Name - Relevance explanation"
-                    """
-                    
-                    response = llm_service.generate_response([
-                        {"role": "user", "content": search_prompt}
-                    ])
-                    
-                    if response['success']:
-                        st.markdown("### 🎯 AI Search Results")
-                        st.write(response['response'])  # Changed from 'content' to 'response'
-                    else:
-                        st.error("AI search failed. Falling back to keyword search.")
-                        search_type = "Keyword Search"
-                
-                if search_type in ["Keyword Search", "Hybrid Search"]:
-                    # Keyword-based search
-                    query_words = search_query.lower().split()
-                    results = []
-                    
-                    for doc in documents:
-                        score = 0
-                        content_lower = (doc['content'] + " " + doc['name']).lower()
-                        
-                        for word in query_words:
-                            score += content_lower.count(word)
-                        
-                        if score > 0:
-                            results.append({
-                                'document': doc,
-                                'score': score,
-                                'relevance': f"Keyword matches: {score}"
-                            })
-                    
-                    # Sort by relevance
-                    results.sort(key=lambda x: x['score'], reverse=True)
-                    results = results[:max_results]
-                    
-                    if results:
-                        st.markdown("### 📋 Search Results")
-                        for i, result in enumerate(results, 1):
-                            doc = result['document']
-                            with st.expander(f"{i}. 📄 {doc['name']} (Score: {result['score']})", expanded=False):
-                                st.write(f"**Type:** {doc['type']}")
-                                st.write(f"**Created:** {doc['created_at'][:10]}")
-                                st.write(f"**Content Preview:** {doc['content'][:300]}...")
-                                st.write(f"**Relevance:** {result['relevance']}")
-                    else:
-                        st.warning("No relevant documents found.")
-                
-            except Exception as e:
-                st.error(f"Search error: {str(e)}")
-
 def show_ai_configuration():
     """AI configuration and testing interface"""
     st.subheader("⚙️ AI Configuration")
@@ -4000,8 +3959,7 @@ def show_ai_configuration():
         ai_service = get_ai_features_service(llm_service, st.session_state.get('rag_service'))
         
         feature_status = {
-            "Document Analysis": "✅ Available" if ai_service else "❌ Not Available",
-            "Semantic Search": "✅ Available" if llm_service else "❌ Not Available", 
+            "Chat Assistant": "✅ Available" if llm_service else "❌ Not Available",
             "Smart Workflows": "✅ Available" if ai_service else "❌ Not Available",
             "RAG Service": "✅ Available" if st.session_state.get('rag_service') else "⚠️ Limited"
         }
