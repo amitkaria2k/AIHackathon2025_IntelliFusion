@@ -13,9 +13,9 @@ from typing import Dict, List, Any, Optional
 import json
 import sys
 
-# Add config directory to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'config'))
-sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
+# Add config directory to path (go up one level from app/)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'config'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'services'))
 
 from config.auth_config import VALID_PASSWORDS, HINT_MESSAGE, MAX_LOGIN_ATTEMPTS
 from config.database import DatabaseManager
